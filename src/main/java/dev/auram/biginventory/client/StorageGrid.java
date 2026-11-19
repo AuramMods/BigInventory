@@ -20,7 +20,7 @@ import java.util.Locale;
 final class StorageGrid {
     static final int CELL = 17;
     static final int COMPACT_CELL = 14;
-    static final int SEARCH_HEIGHT = 16;
+    static final int SEARCH_HEIGHT = StorageSearchBox.HEIGHT;
     private static final int RAIL_WIDTH = 7;
     static final int SCROLLBAR_SPACE = RAIL_WIDTH + 2;
     private static final float COUNT_SCALE = 0.625f;
@@ -47,10 +47,9 @@ final class StorageGrid {
         this.view = view;
         this.font = font;
         this.cellSize = cellSize;
-        search = new EditBox(font, 0, 0, 125, SEARCH_HEIGHT, Component.translatable("biginventory.search"));
+        search = new StorageSearchBox(font);
         search.setMaxLength(96);
         search.setValue(priorSearch);
-        search.setHint(Component.translatable("biginventory.search").withStyle(ChatFormatting.GRAY));
         search.setResponder(text -> {
             query = text.toLowerCase(Locale.ROOT).strip();
             displayedChange = -1;
@@ -68,6 +67,10 @@ final class StorageGrid {
         this.rows = rows;
         search.setPosition(x, y - SEARCH_HEIGHT - 4);
         search.setWidth(columns * cellSize + RAIL_WIDTH - 2);
+    }
+
+    void searchBelowGrid() {
+        search.setY(y + rows * cellSize + 3);
     }
 
     void render(GuiGraphics graphics, int mouseX, int mouseY) {

@@ -24,8 +24,8 @@ final class BackpackChestScreen extends ContainerScreen {
     @Override
     protected void init() {
         // Double chests are nearly the full viewport at the largest GUI scale.
-        searchVisible = height >= chestBottom + 119;
-        imageHeight = chestBottom + (searchVisible ? 116 : 96);
+        searchVisible = height >= chestBottom + 109;
+        imageHeight = chestBottom + (searchVisible ? 106 : 96);
         inventoryLabelY = -30000;
         super.init();
         if (view == null) view = ClientStorage.open(menu.containerId);
@@ -33,7 +33,8 @@ final class BackpackChestScreen extends ContainerScreen {
         playerSlots.arrange(0, imageHeight - 24);
         String query = searchVisible && grid != null ? grid.search().getValue() : "";
         grid = new StorageGrid(view, font, query);
-        grid.bounds(leftPos + 8, topPos + chestBottom + (searchVisible ? 25 : 11), 9, 3);
+        grid.bounds(leftPos + 8, topPos + chestBottom + 11, 9, 3);
+        grid.searchBelowGrid();
         if (searchVisible) addRenderableWidget(grid.search());
     }
 
@@ -55,6 +56,12 @@ final class BackpackChestScreen extends ContainerScreen {
     public void render(GuiGraphics graphics, int x, int y, float time) {
         super.render(graphics, x, y, time);
         grid.tooltip(graphics, menu.getCarried(), x, y);
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        grid.search().tick();
     }
 
     @Override

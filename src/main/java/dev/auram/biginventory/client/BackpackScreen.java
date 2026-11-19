@@ -7,8 +7,8 @@ import net.minecraft.world.entity.player.Player;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
-    private static final int HEADER = 106;
-    private static final int FOOTER = 26;
+    private static final int HEADER = 86;
+    private static final int FOOTER = 26 + StorageGrid.SEARCH_HEIGHT + 3;
     private static final int COLUMNS = 9;
     private final Player player;
     private ClientStorage.View view;
@@ -54,6 +54,7 @@ final class BackpackScreen extends InventoryScreen {
         if (recipeButton != null) recipeButton.setPosition(leftPos + 104, topPos + 61);
         grid.bounds(leftPos + (imageWidth - COLUMNS * StorageGrid.COMPACT_CELL - StorageGrid.SCROLLBAR_SPACE) / 2,
                 topPos + HEADER, COLUMNS, rows);
+        grid.searchBelowGrid();
         grid.search().visible = showGrid();
         if (!showGrid() && getFocused() == grid.search()) setFocused(null);
     }
@@ -75,6 +76,12 @@ final class BackpackScreen extends InventoryScreen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float time) {
         super.render(graphics, mouseX, mouseY, time);
         if (showGrid()) grid.tooltip(graphics, menu.getCarried(), mouseX, mouseY);
+    }
+
+    @Override
+    public void containerTick() {
+        super.containerTick();
+        if (grid != null) grid.search().tick();
     }
 
     @Override
