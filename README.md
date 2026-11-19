@@ -6,7 +6,7 @@ BigInventory replaces the player backpack with weight-limited storage on Minecra
 
 Open the inventory and search by item name or registry ID. Left-click a matching entry to take up to one stack. Right-click to take half of that amount. Click the grid while carrying a stack to deposit it, or right-click to deposit one. Shift-click a grid entry to move it to the hotbar, or directly into an open chest. Scroll the grid to reach more entries.
 
-The chest ring beside the hotbar shows the percentage of storage remaining. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
+The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
 
 Server-side capacity defaults to 500. With the default footprint factor of 32, a cobblestone takes one unit, an empty bucket takes two, and an unstackable tool takes 32. If equipment changes put you over capacity, you keep your items and can withdraw them. Deposits resume when there is room. Movement slows by half and Mining Fatigue I applies while overloaded.
 
