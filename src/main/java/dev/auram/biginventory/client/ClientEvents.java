@@ -5,6 +5,7 @@ import dev.auram.biginventory.StorageNetwork.Hud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.FishingRodItem;
@@ -40,6 +41,9 @@ public final class ClientEvents {
         if (player == null || screen == null || player.isSpectator()) return;
         if (screen.getClass() == InventoryScreen.class) {
             event.setNewScreen(new BackpackScreen(player));
+        } else if (screen.getClass() == CreativeModeInventoryScreen.class) {
+            event.setNewScreen(new BackpackCreativeScreen(player, player.connection.enabledFeatures(),
+                    Minecraft.getInstance().options.operatorItemsTab().get()));
         } else if (screen.getClass() == ContainerScreen.class && screen instanceof ContainerScreen chest) {
             event.setNewScreen(new BackpackChestScreen(chest.getMenu(), player.getInventory(), chest.getTitle()));
         }

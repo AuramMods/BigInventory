@@ -13,11 +13,12 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class StorageNetwork {
-    private static final String VERSION = "2";
+    private static final String VERSION = "3";
     private static final int PAGE_SIZE = 24;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
@@ -60,10 +61,14 @@ public final class StorageNetwork {
         }
     }
 
-    public record ViewRequest(int menu, int token, boolean open) {
-        void encode(FriendlyByteBuf buf) { buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open); }
+    public record ViewRequest(int menu, int token, boolean open, @Nullable ItemStack creativeCursor) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open).writeBoolean(creativeCursor != null);
+            if (creativeCursor != null) buf.writeNbt(creativeCursor.save(new CompoundTag()));
+        }
         static ViewRequest decode(FriendlyByteBuf buf) {
-            return new ViewRequest(buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
+            return new ViewRequest(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
+                    buf.readBoolean() ? ItemStack.of(buf.readNbt()) : null);
         }
     }
 
@@ -99,7 +104,7 @@ public final class StorageNetwork {
         }
     }
 
-    public enum Gesture { DEPOSIT, DEPOSIT_ONE, TAKE, TAKE_HALF, SHIFT_TAKE }
+    public enum Gesture { DEPOSIT, DEPOSIT_ONE, TAKE, TAKE_HALF, SHIFT_TAKE, CREATIVE_TRASH, CREATIVE_CLEAR }
 
     public record Action(int menu, int token, int revision, int entry, Gesture gesture) {
         void encode(FriendlyByteBuf buf) {

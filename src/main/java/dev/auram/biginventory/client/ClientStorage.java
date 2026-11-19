@@ -13,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.StackedContents;
 import net.minecraft.world.item.ItemStack;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,15 +27,19 @@ public final class ClientStorage {
     public static void hud(Hud message) { hud = message; }
 
     static View open(int menu) {
+        return open(menu, null);
+    }
+
+    static View open(int menu, @Nullable ItemStack creativeCursor) {
         if (view != null) close(view);
         view = new View(menu, ++tokens);
-        StorageNetwork.request(new ViewRequest(menu, view.token, true));
+        StorageNetwork.request(new ViewRequest(menu, view.token, true, creativeCursor));
         return view;
     }
 
     static void close(View closing) {
         if (closing != null && view == closing) {
-            StorageNetwork.request(new ViewRequest(view.menu, view.token, false));
+            StorageNetwork.request(new ViewRequest(view.menu, view.token, false, null));
             view = null;
         }
     }
