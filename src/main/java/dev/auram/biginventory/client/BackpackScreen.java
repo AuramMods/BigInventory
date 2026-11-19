@@ -3,7 +3,6 @@ package dev.auram.biginventory.client;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.ModList;
 import org.lwjgl.glfw.GLFW;
@@ -71,25 +70,9 @@ final class BackpackScreen extends InventoryScreen {
         graphics.blit(INVENTORY_LOCATION, leftPos, topPos, 0, 0, 176, 84);
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 51, topPos + 75, 30,
                 leftPos + 51 - mouseX, topPos + 25 - mouseY, player);
-        drawCapacity(graphics);
         int hotbarX = leftPos + (imageWidth - 176) / 2 + 7;
         graphics.blit(INVENTORY_LOCATION, hotbarX, topPos + imageHeight - 23, 7, 141, 162, 18);
         if (showGrid()) grid.render(graphics, mouseX, mouseY);
-    }
-
-    private void drawCapacity(GuiGraphics graphics) {
-        var hud = ClientStorage.hud();
-        int space = imageWidth - 176;
-        if (hud == null || space < 72) return;
-        int x = leftPos + 188;
-        int y = topPos + 24;
-        int barWidth = space - 24;
-        graphics.drawString(font, Component.translatable("biginventory.storage"), x, y, 0xffb6c8cf, false);
-        graphics.drawString(font, hud.used() + " / " + hud.capacity(), x, y + 13, 0xfff1f8fa, false);
-        graphics.fill(x, y + 27, x + barWidth, y + 31, 0xff1b2a32);
-        int filled = hud.capacity() == 0 ? barWidth
-                : (int) Math.min(barWidth, hud.used() * (double) barWidth / hud.capacity());
-        graphics.fill(x, y + 27, x + filled, y + 31, hud.used() > hud.capacity() ? 0xfff48a77 : 0xff89cbb2);
     }
 
     @Override
