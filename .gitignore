@@ -1,0 +1,13 @@
+.gradle/
+build/
+run/
+run-server/
+dev-mods/*.jar
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+bin/
+out/
+.DS_Store

@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '6.0.54'
+}
+
+group = 'dev.auram.biginventory'
+version = mod_version
+base.archivesName = 'biginventory'
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
+    runs {
+        configureEach {
+            property 'forge.logging.console.level', 'info'
+            // The Auram jars contain mixins compiled against production mappings.
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', file('build/createSrgToMcp/output.srg').absolutePath
+            mods {
+                biginventory { source sourceSets.main }
+            }
+        }
+        client {
+            workingDirectory file('run')
+        }
+        server {
+            workingDirectory file('run-server')
+            args '--nogui'
+        }
+    }
+}
+
+repositories {
+    flatDir {
+        dirs 'dev-mods'
+        content { includeGroup 'auram.local' }
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    if (providers.gradleProperty('auramTestMods').getOrElse('true').toBoolean()) {
+        file('dev-mods/auram.txt').readLines().each { coordinate ->
+            runtimeOnly fg.deobf("auram.local:${coordinate}")
+        }
+    }
+}
+
+tasks.named('processResources') {
+    inputs.property 'modVersion', project.version
+    filesMatching('META-INF/mods.toml') { expand modVersion: project.version }
+}
+
+tasks.named('jar') { finalizedBy 'reobfJar' }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+// Allow commands such as "stop" from a terminal running the dev server.
+tasks.withType(JavaExec).matching { it.name == 'runServer' }.configureEach {
+    standardInput = System.in
+}
