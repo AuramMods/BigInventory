@@ -91,8 +91,11 @@ public final class ClientEvents {
         ItemStack held = minecraft.player.getMainHandItem();
         if (!held.isEmpty() && !isTool(held) && status.slot() == minecraft.player.getInventory().selected
                 && status.heldCount() > 0) {
-            graphics.drawString(minecraft.font, "x" + status.heldCount(), middle + 97 + (offhand && !mainRight ? 28 : 0),
-                    y - 4, 0xfff6faf5, true);
+            graphics.pose().pushPose();
+            graphics.pose().translate(middle + 97 + (offhand && !mainRight ? 28 : 0), y - 3, 0);
+            graphics.pose().scale(0.75f, 0.75f, 1);
+            graphics.drawString(minecraft.font, "x" + ItemCount.format(status.heldCount()), 0, 0, 0xffffffff, true);
+            graphics.pose().popPose();
         }
     }
 

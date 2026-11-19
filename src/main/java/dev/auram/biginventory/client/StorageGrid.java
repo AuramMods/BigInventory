@@ -23,6 +23,7 @@ final class StorageGrid {
     static final int SEARCH_HEIGHT = 16;
     private static final int RAIL_WIDTH = 7;
     static final int SCROLLBAR_SPACE = RAIL_WIDTH + 2;
+    private static final float COUNT_SCALE = 0.625f;
     private final ClientStorage.View view;
     private final Font font;
     private final EditBox search;
@@ -86,8 +87,9 @@ final class StorageGrid {
             graphics.pose().translate(px, py, 0);
             graphics.pose().scale(scale, scale, 1);
             graphics.renderItem(entry.icon(), 0, 0);
-            graphics.renderItemDecorations(font, entry.icon(), 0, 0, entry.count() > 1 ? abbreviate(entry.count()) : "");
+            graphics.renderItemDecorations(font, entry.icon(), 0, 0, "");
             graphics.pose().popPose();
+            if (entry.count() > 1) renderCount(graphics, entry.count(), px, py);
         }
         int railX = railX();
         int length = rows * cellSize - 1;
@@ -181,9 +183,14 @@ final class StorageGrid {
         return Math.max(7, length * rows / Math.max(rows, totalRows()));
     }
 
-    private static String abbreviate(long count) {
-        if (count >= 1_000_000) return count / 1_000_000 + "M";
-        if (count >= 1_000) return count / 1_000 + "k";
-        return Long.toString(count);
+    private void renderCount(GuiGraphics graphics, long count, int x, int y) {
+        String label = ItemCount.format(count);
+        int width = font.width(label);
+        float scale = Math.min(COUNT_SCALE, (cellSize - 2) / (float) width);
+        graphics.pose().pushPose();
+        graphics.pose().translate(x + cellSize - 2, y + cellSize - 1, 200);
+        graphics.pose().scale(scale, scale, 1);
+        graphics.drawString(font, label, -width, -font.lineHeight, 0xffffffff, true);
+        graphics.pose().popPose();
     }
 }
