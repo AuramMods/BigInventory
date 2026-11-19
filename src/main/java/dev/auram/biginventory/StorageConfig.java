@@ -19,7 +19,8 @@ final class StorageConfig {
                 .comment("Weighted capacity of the player's storage, excluding the hotbar.")
                 .defineInRange("baseCapacity", 500, 0, Integer.MAX_VALUE);
         FOOTPRINT_FACTOR = builder
-                .comment("Each stored item's footprint is ceil(footprintFactor / max stack size).")
+                .comment("Each stored item's footprint is ceil(footprintFactor / max stack size).",
+                        "Explore the weight curve in Desmos at https://www.desmos.com/calculator/py8ad6ng5t")
                 .defineInRange("footprintFactor", 32, 1, 8192);
         REFILL_HOTBAR = builder
                 .comment("Refill an empty hotbar slot from storage after its stack is used up or its tool breaks.")
