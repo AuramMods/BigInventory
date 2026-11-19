@@ -4,18 +4,17 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.fml.ModList;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
     private static final int HEADER = 106;
     private static final int FOOTER = 26;
+    private static final int COLUMNS = 9;
     private final Player player;
     private ClientStorage.View view;
     private PlayerSlots playerSlots;
     private StorageGrid grid;
     private ImageButton recipeButton;
-    private int columns;
     private int rows;
 
     BackpackScreen(Player player) {
@@ -25,10 +24,7 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     protected void init() {
-        int margin = width >= 440 && ModList.get().isLoaded("jei") ? 124 : 16;
-        columns = Math.max(9, Math.min(18, (width - margin - 22) / StorageGrid.COMPACT_CELL));
         rows = Math.max(1, (height - 12 - HEADER - FOOTER) / StorageGrid.COMPACT_CELL);
-        imageWidth = Math.max(176, columns * StorageGrid.COMPACT_CELL + 22);
         imageHeight = HEADER + rows * StorageGrid.COMPACT_CELL + FOOTER;
         recipeButton = null;
         super.init();
@@ -42,7 +38,7 @@ final class BackpackScreen extends InventoryScreen {
         }
         if (view == null) view = ClientStorage.open(menu.containerId);
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
-        playerSlots.arrange((imageWidth - 176) / 2, imageHeight - 22);
+        playerSlots.arrange(0, imageHeight - 22);
         String query = grid == null ? "" : grid.search().getValue();
         grid = new StorageGrid(view, font, query, StorageGrid.COMPACT_CELL);
         addRenderableWidget(grid.search());
@@ -56,7 +52,8 @@ final class BackpackScreen extends InventoryScreen {
     private void layoutControls() {
         if (grid == null) return;
         if (recipeButton != null) recipeButton.setPosition(leftPos + 104, topPos + 61);
-        grid.bounds(leftPos + 6, topPos + HEADER, columns, rows);
+        grid.bounds(leftPos + (imageWidth - COLUMNS * StorageGrid.COMPACT_CELL - StorageGrid.SCROLLBAR_SPACE) / 2,
+                topPos + HEADER, COLUMNS, rows);
         grid.search().visible = showGrid();
         if (!showGrid() && getFocused() == grid.search()) setFocused(null);
     }
@@ -70,8 +67,7 @@ final class BackpackScreen extends InventoryScreen {
         graphics.blit(INVENTORY_LOCATION, leftPos, topPos, 0, 0, 176, 84);
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 51, topPos + 75, 30,
                 leftPos + 51 - mouseX, topPos + 25 - mouseY, player);
-        int hotbarX = leftPos + (imageWidth - 176) / 2 + 7;
-        graphics.blit(INVENTORY_LOCATION, hotbarX, topPos + imageHeight - 23, 7, 141, 162, 18);
+        graphics.blit(INVENTORY_LOCATION, leftPos + 7, topPos + imageHeight - 23, 7, 141, 162, 18);
         if (showGrid()) grid.render(graphics, mouseX, mouseY);
     }
 

@@ -22,6 +22,7 @@ final class StorageGrid {
     static final int COMPACT_CELL = 14;
     static final int SEARCH_HEIGHT = 16;
     private static final int RAIL_WIDTH = 7;
+    static final int SCROLLBAR_SPACE = RAIL_WIDTH + 2;
     private final ClientStorage.View view;
     private final Font font;
     private final EditBox search;
