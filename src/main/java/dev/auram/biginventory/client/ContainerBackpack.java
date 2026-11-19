@@ -59,7 +59,12 @@ public final class ContainerBackpack {
     public static void draw(ContainerScreenEvent.Render.Background event) {
         if (active == null || active.screen() != event.getContainerScreen()) return;
         active.layout();
-        if (active.visible()) active.grid().render(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
+        if (active.visible()) {
+            int x = active.screen().getGuiLeft() + active.slotX();
+            int y = active.screen().getGuiTop() + active.slotY();
+            event.getGuiGraphics().fill(x - 1, y - 1, x + 161, y + 53, 0xff354853);
+            active.grid().render(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
+        }
     }
 
     @SubscribeEvent
@@ -125,10 +130,11 @@ public final class ContainerBackpack {
             int x = screen.getGuiLeft() + slotX;
             int y = screen.getGuiTop() + slotY;
             grid.bounds(x, y, 9, 3);
-            grid.search().setPosition(x + 78, y - 16);
-            grid.search().setWidth(82);
-            grid.search().visible = visible();
-            if (!visible() && screen.getFocused() == grid.search()) screen.setFocused(null);
+            int searchY = screen.getGuiTop() - StorageGrid.SEARCH_HEIGHT - 4;
+            if (searchY < 0) searchY = screen.getGuiTop() + screen.getYSize() + 4;
+            grid.search().setPosition(x, searchY);
+            grid.search().visible = visible() && searchY + StorageGrid.SEARCH_HEIGHT <= screen.height;
+            if (!grid.search().visible && screen.getFocused() == grid.search()) screen.setFocused(null);
         }
     }
 
