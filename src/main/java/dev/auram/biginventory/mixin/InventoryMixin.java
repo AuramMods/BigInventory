@@ -43,6 +43,11 @@ abstract class InventoryMixin implements BackpackAccess {
         return bigInventory$storage;
     }
 
+    @Inject(method = "getContainerSize", at = @At("RETURN"), cancellable = true)
+    private void bigInventory$includeOverflowSize(CallbackInfoReturnable<Integer> cir) {
+        cir.setReturnValue(cir.getReturnValueI() + bigInventory$overflow.size());
+    }
+
     @Inject(method = "add(ILnet/minecraft/world/item/ItemStack;)Z", at = @At("HEAD"), cancellable = true)
     private void bigInventory$add(int slot, ItemStack input, CallbackInfoReturnable<Boolean> cir) {
         if (player.level().isClientSide || input.isEmpty()) return;

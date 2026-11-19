@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -64,7 +65,9 @@ public final class ClientEvents {
                 || minecraft.options.hideGui) return;
         int middle = event.getWindow().getGuiScaledWidth() / 2;
         int y = event.getWindow().getGuiScaledHeight() - 14;
-        int x = Math.max(14, middle - 111);
+        boolean offhand = !minecraft.player.getOffhandItem().isEmpty();
+        boolean mainRight = minecraft.player.getMainArm() == HumanoidArm.RIGHT;
+        int x = Math.max(14, middle - 111 - (offhand && mainRight ? 28 : 0));
         double remaining = status.capacity() == 0 ? 0 : Math.max(0, status.capacity() - status.used()) / (double) status.capacity();
         int percent = (int) Math.floor(remaining * 100);
         GuiGraphics graphics = event.getGuiGraphics();
@@ -80,7 +83,8 @@ public final class ClientEvents {
         ItemStack held = minecraft.player.getMainHandItem();
         if (!held.isEmpty() && !isTool(held) && status.slot() == minecraft.player.getInventory().selected
                 && status.heldCount() > 0) {
-            graphics.drawString(minecraft.font, "x" + status.heldCount(), middle + 97, y - 4, 0xfff6faf5, true);
+            graphics.drawString(minecraft.font, "x" + status.heldCount(), middle + 97 + (offhand && !mainRight ? 28 : 0),
+                    y - 4, 0xfff6faf5, true);
         }
     }
 

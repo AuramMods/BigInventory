@@ -34,6 +34,14 @@ final class PlayerSlots {
         }
     }
 
+    void hideBackpack() {
+        for (Position pos : slots) {
+            if (Backpack.isStorageSlot(pos.slot().getSlotIndex())) {
+                ((SlotPosition) pos.slot()).bigInventory$setX(-30000);
+            }
+        }
+    }
+
     void restore() {
         for (Position pos : slots) {
             SlotPosition access = (SlotPosition) pos.slot();

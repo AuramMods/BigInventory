@@ -17,10 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class StorageNetwork {
-    private static final String VERSION = "1";
+    private static final String VERSION = "2";
     private static final int PAGE_SIZE = 24;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
+            ResourceLocation.fromNamespaceAndPath(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
 
     static void register() {
         CHANNEL.messageBuilder(Hud.class, 0, NetworkDirection.PLAY_TO_CLIENT)
@@ -74,7 +74,7 @@ public final class StorageNetwork {
         }
     }
 
-    public record Entry(int id, ItemStack icon, long count) {}
+    public record Entry(int id, ItemStack icon, long count, long overflowCount) {}
 
     public record ViewPage(int token, int revision, List<Entry> entries) {
         void encode(FriendlyByteBuf buf) {
@@ -83,6 +83,7 @@ public final class StorageNetwork {
                 buf.writeVarInt(entry.id());
                 buf.writeNbt(entry.icon().save(new CompoundTag()));
                 buf.writeVarLong(entry.count());
+                buf.writeVarLong(entry.overflowCount());
             }
         }
         static ViewPage decode(FriendlyByteBuf buf) {
@@ -91,7 +92,9 @@ public final class StorageNetwork {
             int len = buf.readVarInt();
             if (len < 0 || len > PAGE_SIZE) throw new IllegalArgumentException("Invalid BigInventory page size");
             List<Entry> entries = new ArrayList<>(len);
-            for (int i = 0; i < len; i++) entries.add(new Entry(buf.readVarInt(), ItemStack.of(buf.readNbt()), buf.readVarLong()));
+            for (int i = 0; i < len; i++) {
+                entries.add(new Entry(buf.readVarInt(), ItemStack.of(buf.readNbt()), buf.readVarLong(), buf.readVarLong()));
+            }
             return new ViewPage(token, revision, entries);
         }
     }

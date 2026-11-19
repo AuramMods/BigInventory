@@ -1,4 +1,5 @@
 {
+  "biginventory.storage": "Storage weight",
   "biginventory.search": "Search storage",
   "biginventory.stored": "Stored: %s"
 }

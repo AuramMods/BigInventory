@@ -153,8 +153,13 @@ final class StorageSessions {
                 CompoundTag key = stack.save(new CompoundTag());
                 key.remove("Count");
                 Entry existing = variants.get(key);
-                if (existing == null) variants.put(key, new Entry(variants.size(), stack.copyWithCount(1), stack.getCount()));
-                else variants.put(key, new Entry(existing.id(), existing.icon(), existing.count() + stack.getCount()));
+                long overflow = slot >= Backpack.OVERFLOW_START ? stack.getCount() : 0;
+                if (existing == null) {
+                    variants.put(key, new Entry(variants.size(), stack.copyWithCount(1), stack.getCount(), overflow));
+                } else {
+                    variants.put(key, new Entry(existing.id(), existing.icon(), existing.count() + stack.getCount(),
+                            existing.overflowCount() + overflow));
+                }
             }
             List<CompoundTag> nextKeys = new ArrayList<>(variants.keySet());
             List<Entry> next = new ArrayList<>(variants.values());
@@ -168,7 +173,9 @@ final class StorageSessions {
 
         private boolean countsMatch(List<Entry> next) {
             for (int i = 0; i < entries.size(); i++) {
-                if (entries.get(i).count() != next.get(i).count()) return false;
+                Entry previous = entries.get(i);
+                Entry entry = next.get(i);
+                if (previous.count() != entry.count() || previous.overflowCount() != entry.overflowCount()) return false;
             }
             return true;
         }

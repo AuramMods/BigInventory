@@ -27,10 +27,10 @@ final class BackpackScreen extends InventoryScreen {
     @Override
     protected void init() {
         int margin = width >= 440 && ModList.get().isLoaded("jei") ? 124 : 16;
-        columns = Math.max(9, Math.min(18, (width - margin - 22) / StorageGrid.CELL));
-        rows = Math.max(1, (height - 12 - HEADER - FOOTER) / StorageGrid.CELL);
-        imageWidth = Math.max(176, columns * StorageGrid.CELL + 22);
-        imageHeight = HEADER + rows * StorageGrid.CELL + FOOTER;
+        columns = Math.max(9, Math.min(18, (width - margin - 22) / StorageGrid.COMPACT_CELL));
+        rows = Math.max(1, (height - 12 - HEADER - FOOTER) / StorageGrid.COMPACT_CELL);
+        imageWidth = Math.max(176, columns * StorageGrid.COMPACT_CELL + 22);
+        imageHeight = HEADER + rows * StorageGrid.COMPACT_CELL + FOOTER;
         recipeButton = null;
         super.init();
         if (minecraft.gameMode.hasInfiniteItems()) return;
@@ -45,7 +45,7 @@ final class BackpackScreen extends InventoryScreen {
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
         playerSlots.arrange((imageWidth - 176) / 2, imageHeight - 22);
         String query = grid == null ? "" : grid.search().getValue();
-        grid = new StorageGrid(view, font, query);
+        grid = new StorageGrid(view, font, query, StorageGrid.COMPACT_CELL);
         addRenderableWidget(grid.search());
         layoutControls();
     }
@@ -71,9 +71,25 @@ final class BackpackScreen extends InventoryScreen {
         graphics.blit(INVENTORY_LOCATION, leftPos, topPos, 0, 0, 176, 84);
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 51, topPos + 75, 30,
                 leftPos + 51 - mouseX, topPos + 25 - mouseY, player);
+        drawCapacity(graphics);
         int hotbarX = leftPos + (imageWidth - 176) / 2 + 7;
         graphics.blit(INVENTORY_LOCATION, hotbarX, topPos + imageHeight - 23, 7, 141, 162, 18);
         if (showGrid()) grid.render(graphics, mouseX, mouseY);
+    }
+
+    private void drawCapacity(GuiGraphics graphics) {
+        var hud = ClientStorage.hud();
+        int space = imageWidth - 176;
+        if (hud == null || space < 72) return;
+        int x = leftPos + 188;
+        int y = topPos + 24;
+        int barWidth = space - 24;
+        graphics.drawString(font, Component.translatable("biginventory.storage"), x, y, 0xffb6c8cf, false);
+        graphics.drawString(font, hud.used() + " / " + hud.capacity(), x, y + 13, 0xfff1f8fa, false);
+        graphics.fill(x, y + 27, x + barWidth, y + 31, 0xff1b2a32);
+        int filled = hud.capacity() == 0 ? barWidth
+                : (int) Math.min(barWidth, hud.used() * (double) barWidth / hud.capacity());
+        graphics.fill(x, y + 27, x + filled, y + 31, hud.used() > hud.capacity() ? 0xfff48a77 : 0xff89cbb2);
     }
 
     @Override

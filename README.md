@@ -1,6 +1,14 @@
 # BigInventory
 
-Forge development project for Auram's weighted player inventory. This checkpoint registers BigInventory and its server config. The storage engine, screen, HUD and gameplay integrations are planned in [the implementation and QA plan](docs/PLAN.md).
+BigInventory replaces the player backpack with weight-limited storage on Minecraft Forge 1.20.1. The nine hotbar slots, armor, offhand, and crafting grid have their own space.
+
+## Play
+
+Open the inventory and search by item name or registry ID. Left-click a matching entry to take up to one stack. Right-click to take half of that amount. Click the grid while carrying a stack to deposit it, or right-click to deposit one. Shift-click a grid entry to move it to the hotbar, or directly into an open chest. Scroll the grid to reach more entries.
+
+The chest ring beside the hotbar shows the percentage of storage remaining. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
+
+Server-side capacity defaults to 500. With the default footprint factor of 32, a cobblestone takes one unit, an empty bucket takes two, and an unstackable tool takes 32. If equipment changes put you over capacity, you keep your items and can withdraw them. Deposits resume when there is room. Movement slows by half and Mining Fatigue I applies while overloaded.
 
 ## Run the development client
 
@@ -25,7 +33,9 @@ echo eula=true > run-server/eula.txt
 ./gradlew runServer
 ```
 
-The default world generates `run-server/world/serverconfig/biginventory-server.toml`. Its `[storage]` section has `baseCapacity = 500` and `footprintFactor = 32`. The footprint factor accepts integers from 1 through 8192. Gameplay enforcement is scheduled for the storage milestone.
+The default world generates `run-server/world/serverconfig/biginventory-server.toml`. Its `[storage]` section contains `baseCapacity`, `footprintFactor`, `refillHotbar`, and `curioCapacity`. The footprint factor accepts integers from 1 through 8192. You can disable BigInventory's refill when testing another refill mod.
+
+With Curios installed, add one rule per item such as `"pack:rucksack=150"` or `"pack:cursed_ring@ring=-50"` to `curioCapacity`. A slot-specific amount takes precedence over the general amount for that item. Curios data controls which slots and items can be equipped.
 
 ## Build
 
@@ -34,3 +44,5 @@ The default world generates `run-server/world/serverconfig/biginventory-server.t
 ```
 
 The reobfuscated mod jar is written to `build/libs/`. For a checkout without the Auram jars, use `./gradlew -PauramTestMods=false build`. The same property works with `runClient` or `runServer` for a Forge-only baseline.
+
+See [the implementation and QA plan](docs/PLAN.md) for pack integration coverage and later test cases.

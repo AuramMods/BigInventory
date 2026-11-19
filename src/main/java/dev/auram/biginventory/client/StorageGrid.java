@@ -19,11 +19,13 @@ import java.util.Locale;
 
 final class StorageGrid {
     static final int CELL = 17;
+    static final int COMPACT_CELL = 14;
     static final int SEARCH_HEIGHT = 16;
     private static final int RAIL_WIDTH = 7;
     private final ClientStorage.View view;
     private final Font font;
     private final EditBox search;
+    private final int cellSize;
     private List<Entry> filtered = List.of();
     private String query = "";
     private int displayedChange = -1;
@@ -36,8 +38,13 @@ final class StorageGrid {
     private int thumbGrab;
 
     StorageGrid(ClientStorage.View view, Font font, String priorSearch) {
+        this(view, font, priorSearch, CELL);
+    }
+
+    StorageGrid(ClientStorage.View view, Font font, String priorSearch, int cellSize) {
         this.view = view;
         this.font = font;
+        this.cellSize = cellSize;
         search = new EditBox(font, 0, 0, 125, SEARCH_HEIGHT, Component.translatable("biginventory.search"));
         search.setMaxLength(96);
         search.setValue(priorSearch);
@@ -58,7 +65,7 @@ final class StorageGrid {
         this.columns = columns;
         this.rows = rows;
         search.setPosition(x, y - SEARCH_HEIGHT - 4);
-        search.setWidth(columns * CELL + RAIL_WIDTH - 2);
+        search.setWidth(columns * cellSize + RAIL_WIDTH - 2);
     }
 
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -66,17 +73,23 @@ final class StorageGrid {
         int hovered = indexUnderMouse(mouseX, mouseY);
         for (int cell = 0; cell < columns * rows; cell++) {
             int index = rowOffset * columns + cell;
-            int px = x + cell % columns * CELL;
-            int py = y + cell / columns * CELL;
-            graphics.fill(px, py, px + CELL - 1, py + CELL - 1, index == hovered ? 0xff506977 : 0xff27353f);
-            graphics.fill(px, py, px + CELL - 1, py + 1, 0xff14222b);
+            int px = x + cell % columns * cellSize;
+            int py = y + cell / columns * cellSize;
+            graphics.fill(px, py, px + cellSize - 1, py + cellSize - 1,
+                    index == hovered ? 0xff506977 : 0xff27353f);
+            graphics.fill(px, py, px + cellSize - 1, py + 1, 0xff14222b);
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
-            graphics.renderItem(entry.icon(), px, py);
-            graphics.renderItemDecorations(font, entry.icon(), px, py, entry.count() > 1 ? abbreviate(entry.count()) : "");
+            float scale = cellSize == COMPACT_CELL ? 0.75f : 1.0f;
+            graphics.pose().pushPose();
+            graphics.pose().translate(px, py, 0);
+            graphics.pose().scale(scale, scale, 1);
+            graphics.renderItem(entry.icon(), 0, 0);
+            graphics.renderItemDecorations(font, entry.icon(), 0, 0, entry.count() > 1 ? abbreviate(entry.count()) : "");
+            graphics.pose().popPose();
         }
         int railX = railX();
-        int length = rows * CELL - 1;
+        int length = rows * cellSize - 1;
         graphics.fill(railX, y, railX + RAIL_WIDTH, y + length, 0xff1a252c);
         int thumb = thumbHeight();
         int offset = maxRow() == 0 ? 0 : (length - thumb) * rowOffset / maxRow();
@@ -99,7 +112,7 @@ final class StorageGrid {
         refresh();
         if (mouseX >= railX()) {
             if (button == 0 && maxRow() > 0) {
-                int length = rows * CELL - 1;
+                int length = rows * cellSize - 1;
                 int height = thumbHeight();
                 int top = y + (length - height) * rowOffset / maxRow();
                 thumbGrab = mouseY >= top && mouseY < top + height ? (int) mouseY - top : height / 2;
@@ -126,7 +139,7 @@ final class StorageGrid {
 
     boolean drag(double mouseY) {
         if (!dragging) return false;
-        int travel = rows * CELL - 1 - thumbHeight();
+        int travel = rows * cellSize - 1 - thumbHeight();
         rowOffset = travel <= 0 ? 0 : Mth.clamp((int) Math.round((mouseY - y - thumbGrab) * maxRow() / travel), 0, maxRow());
         return true;
     }
@@ -148,22 +161,22 @@ final class StorageGrid {
     }
 
     private int indexUnderMouse(double mx, double my) {
-        if (mx < x || my < y || mx >= x + columns * CELL || my >= y + rows * CELL) return -1;
-        return (rowOffset + (int) (my - y) / CELL) * columns + (int) (mx - x) / CELL;
+        if (mx < x || my < y || mx >= x + columns * cellSize || my >= y + rows * cellSize) return -1;
+        return (rowOffset + (int) (my - y) / cellSize) * columns + (int) (mx - x) / cellSize;
     }
 
     private boolean inside(double mx, double my) {
-        return mx >= x && mx < railX() + RAIL_WIDTH && my >= y && my < y + rows * CELL;
+        return mx >= x && mx < railX() + RAIL_WIDTH && my >= y && my < y + rows * cellSize;
     }
 
-    private int railX() { return x + columns * CELL + 2; }
+    private int railX() { return x + columns * cellSize + 2; }
 
     private int totalRows() { return (filtered.size() + columns - 1) / columns; }
 
     private int maxRow() { return Math.max(0, totalRows() - rows); }
 
     private int thumbHeight() {
-        int length = rows * CELL - 1;
+        int length = rows * cellSize - 1;
         return Math.max(7, length * rows / Math.max(rows, totalRows()));
     }
 

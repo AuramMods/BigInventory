@@ -9,6 +9,9 @@ import dev.auram.biginventory.StorageNetwork.ViewAck;
 import dev.auram.biginventory.StorageNetwork.ViewPage;
 import dev.auram.biginventory.StorageNetwork.ViewRequest;
 import dev.auram.biginventory.StorageNetwork.ViewStart;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.StackedContents;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,17 +46,17 @@ public final class ClientStorage {
 
     public static void start(ViewStart start) {
         if (view != null && view.token == start.token()) {
-            view.revision = start.revision();
+            view.incomingRevision = start.revision();
             view.total = start.entries();
-            view.entries.clear();
-            view.changes++;
+            view.incoming.clear();
+            view.applyCompleteView();
         }
     }
 
     public static void page(ViewPage page) {
-        if (view != null && view.token == page.token() && view.revision == page.revision()) {
-            view.entries.addAll(page.entries());
-            view.changes++;
+        if (view != null && view.token == page.token() && view.incomingRevision == page.revision()) {
+            view.incoming.addAll(page.entries());
+            view.applyCompleteView();
         }
     }
 
@@ -61,10 +64,23 @@ public final class ClientStorage {
         if (view != null && view.token == ack.token()) view.pending = false;
     }
 
+    public static void accountOverflow(StackedContents contents) {
+        if (view == null) return;
+        for (Entry entry : view.entries) {
+            ItemStack stack = entry.icon();
+            if (entry.overflowCount() > 0 && !stack.isDamaged() && !stack.isEnchanted() && !stack.hasCustomHoverName()) {
+                int count = (int) Math.min(Integer.MAX_VALUE, entry.overflowCount());
+                contents.accountStack(stack.copyWithCount(count), count);
+            }
+        }
+    }
+
     static final class View {
         final int menu;
         final int token;
-        final List<Entry> entries = new ArrayList<>();
+        final List<Entry> incoming = new ArrayList<>();
+        List<Entry> entries = List.of();
+        int incomingRevision;
         int revision;
         int total;
         int changes;
@@ -76,9 +92,19 @@ public final class ClientStorage {
         }
 
         void act(int id, Gesture gesture) {
-            if (view != this || pending || revision == 0) return;
+            if (view != this || pending || revision == 0 || revision != incomingRevision) return;
             pending = true;
             StorageNetwork.action(new Action(menu, token, revision, id, gesture));
+        }
+
+        void applyCompleteView() {
+            if (incoming.size() == total) {
+                entries = List.copyOf(incoming);
+                revision = incomingRevision;
+                changes++;
+                var player = Minecraft.getInstance().player;
+                if (player != null) player.getInventory().setChanged();
+            }
         }
     }
 
