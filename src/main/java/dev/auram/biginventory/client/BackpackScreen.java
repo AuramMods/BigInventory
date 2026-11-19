@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
@@ -62,13 +63,17 @@ final class BackpackScreen extends InventoryScreen {
     @Override
     protected void renderBg(GuiGraphics graphics, float time, int mouseX, int mouseY) {
         layoutControls();
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xff101b21);
-        graphics.fill(leftPos + 2, topPos + 2, leftPos + imageWidth - 2, topPos + imageHeight - 2, 0xff354853);
-        // Reuse the game's equipment and crafting controls in the header.
-        graphics.blit(INVENTORY_LOCATION, leftPos, topPos, 0, 0, 176, 84);
+        InventorySkin.panel(graphics, leftPos, topPos, imageWidth, imageHeight);
+        InventorySkin.well(graphics, leftPos + 25, topPos + 6, 52, 72, 0xff202020);
+        InventorySkin.craftingArrow(graphics, leftPos + 135, topPos + 36);
+        Slot result = menu.getSlot(0);
+        InventorySkin.well(graphics, leftPos + result.x - 4, topPos + result.y - 4, 24, 24, 0xff8c8c8c);
+        for (int index = 1; index < menu.slots.size(); index++) {
+            Slot slot = menu.getSlot(index);
+            if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);
+        }
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 51, topPos + 75, 30,
                 leftPos + 51 - mouseX, topPos + 25 - mouseY, player);
-        graphics.blit(INVENTORY_LOCATION, leftPos + 7, topPos + imageHeight - 23, 7, 141, 162, 18);
         if (showGrid()) grid.render(graphics, mouseX, mouseY);
     }
 

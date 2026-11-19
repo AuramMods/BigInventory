@@ -42,12 +42,10 @@ final class BackpackChestScreen extends ContainerScreen {
     protected void renderBg(GuiGraphics graphics, float time, int x, int y) {
         super.renderBg(graphics, time, x, y);
         int bottom = topPos + imageHeight;
-        graphics.fill(leftPos, topPos + chestBottom, leftPos + imageWidth, bottom, 0xff101b21);
-        graphics.fill(leftPos + 2, topPos + chestBottom, leftPos + imageWidth - 2, bottom - 2, 0xff354853);
+        InventorySkin.panel(graphics, leftPos, topPos + chestBottom, imageWidth, imageHeight - chestBottom);
         for (int i = 0; i < 9; i++) {
             int px = leftPos + 7 + i * 18;
-            graphics.fill(px, bottom - 25, px + 18, bottom - 7, 0xff809099);
-            graphics.fill(px + 1, bottom - 24, px + 17, bottom - 8, 0xff27353f);
+            InventorySkin.well(graphics, px, bottom - 25, 18, 18, 0xff8c8c8c);
         }
         grid.render(graphics, x, y);
     }

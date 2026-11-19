@@ -80,9 +80,8 @@ final class StorageGrid {
             int index = rowOffset * columns + cell;
             int px = x + cell % columns * cellSize;
             int py = y + cell / columns * cellSize;
-            graphics.fill(px, py, px + cellSize - 1, py + cellSize - 1,
-                    index == hovered ? 0xff506977 : 0xff27353f);
-            graphics.fill(px, py, px + cellSize - 1, py + 1, 0xff14222b);
+            InventorySkin.well(graphics, px, py, cellSize - 1, cellSize - 1,
+                    index == hovered ? 0xffb1b1b1 : 0xff929292);
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
             float scale = cellSize == COMPACT_CELL ? 0.75f : 1.0f;
@@ -96,11 +95,12 @@ final class StorageGrid {
         }
         int railX = railX();
         int length = rows * cellSize - 1;
-        graphics.fill(railX, y, railX + RAIL_WIDTH, y + length, 0xff1a252c);
+        InventorySkin.well(graphics, railX, y, RAIL_WIDTH, length, 0xff858585);
         int thumb = thumbHeight();
         int offset = maxRow() == 0 ? 0 : (length - thumb) * rowOffset / maxRow();
-        graphics.fill(railX + 1, y + offset, railX + RAIL_WIDTH - 1, y + offset + thumb,
-                maxRow() == 0 ? 0xff3b4b52 : 0xff87a7ae);
+        if (maxRow() > 0) {
+            graphics.fill(railX + 1, y + offset, railX + RAIL_WIDTH - 1, y + offset + thumb, 0xffdcdcdc);
+        }
     }
 
     void tooltip(GuiGraphics graphics, ItemStack carried, int mouseX, int mouseY) {

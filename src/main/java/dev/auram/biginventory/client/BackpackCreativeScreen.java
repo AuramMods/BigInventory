@@ -3,10 +3,12 @@ package dev.auram.biginventory.client;
 import dev.auram.biginventory.StorageNetwork.Gesture;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
@@ -96,10 +98,26 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
 
     @Override
     protected void renderBg(GuiGraphics graphics, float time, int mouseX, int mouseY) {
-        super.renderBg(graphics, time, mouseX, mouseY);
-        if (isStorageOpen()) {
-            graphics.fill(leftPos + 7, topPos + GRID_TOP, leftPos + 172, topPos + 109, 0xff354853);
-            grid.render(graphics, mouseX, mouseY);
+        if (!isStorageOpen()) {
+            super.renderBg(graphics, time, mouseX, mouseY);
+            return;
+        }
+        var tabs = getCurrentPage().getVisibleTabs();
+        for (CreativeModeTab tab : tabs) {
+            if (tab.getType() != CreativeModeTab.Type.INVENTORY) renderTabButton(graphics, tab);
+        }
+        InventorySkin.panel(graphics, leftPos, topPos, imageWidth, imageHeight);
+        InventorySkin.well(graphics, leftPos + 72, topPos + 6, 34, 43, 0xff202020);
+        for (Slot slot : menu.slots) {
+            if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);
+        }
+        Slot trash = menu.getSlot(player.inventoryMenu.slots.size());
+        InventorySkin.trash(graphics, leftPos + trash.x, topPos + trash.y);
+        InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 88, topPos + 45, 20,
+                leftPos + 88 - mouseX, topPos + 15 - mouseY, player);
+        grid.render(graphics, mouseX, mouseY);
+        for (CreativeModeTab tab : tabs) {
+            if (tab.getType() == CreativeModeTab.Type.INVENTORY) renderTabButton(graphics, tab);
         }
     }
 
