@@ -1,0 +1,291 @@
+package dev.auram.biginventory;
+
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.fml.ModList;
+
+import java.util.function.Predicate;
+
+/** The first 27 cells are the legacy inventory slots. Overflow follows the equipment indices. */
+public final class Backpack {
+    public static final int FIRST = 9;
+    public static final int LEGACY_END = 36;
+    public static final int OVERFLOW_START = 41;
+    public static final String SAVE_KEY = "biginventory:backpack";
+
+    private final Inventory inventory;
+    private final NonNullList<ItemStack> overflow;
+
+    public Backpack(Inventory inventory, NonNullList<ItemStack> overflow) {
+        this.inventory = inventory;
+        this.overflow = overflow;
+    }
+
+    public static Backpack of(Inventory inventory) {
+        return ((BackpackAccess) inventory).bigInventory$backpack();
+    }
+
+    public static boolean isStorageSlot(int slot) {
+        return (slot >= FIRST && slot < LEGACY_END) || slot >= OVERFLOW_START;
+    }
+
+    public static int footprint(int factor, int stackMax) {
+        return 1 + (factor - 1) / Math.max(1, stackMax);
+    }
+
+    public static int stackLimit(ItemStack stack) {
+        return Math.max(1, Math.min(64, stack.getMaxStackSize()));
+    }
+
+    public static boolean matches(ItemStack a, ItemStack b) {
+        return !a.isEmpty() && !b.isEmpty() && ItemStack.isSameItemSameTags(a, b);
+    }
+
+    public long capacity() {
+        long base = StorageConfig.BASE_CAPACITY.get();
+        var rules = StorageConfig.CURIO_CAPACITY.get();
+        if (!rules.isEmpty() && ModList.get().isLoaded("curios")) {
+            base += CuriosCapacity.adjustment(inventory.player, rules);
+        }
+        return Math.max(0, base);
+    }
+
+    public long weight(ItemStack stack) {
+        return stack.isEmpty() ? 0
+                : (long) stack.getCount() * footprint(StorageConfig.FOOTPRINT_FACTOR.get(), stack.getMaxStackSize());
+    }
+
+    public long usedWeight() {
+        long used = 0;
+        int factor = StorageConfig.FOOTPRINT_FACTOR.get();
+        for (int slot = FIRST; slot < inventory.getContainerSize(); slot++) {
+            if (isStorageSlot(slot)) {
+                ItemStack stack = inventory.getItem(slot);
+                if (!stack.isEmpty()) used += (long) stack.getCount() * footprint(factor, stack.getMaxStackSize());
+            }
+        }
+        return used;
+    }
+
+    public int slotLimit(int slot, ItemStack incoming) {
+        if (incoming.isEmpty()) return stackLimit(incoming);
+        ItemStack current = inventory.getItem(slot);
+        long room = capacity() - usedWeight();
+        boolean same = matches(current, incoming);
+        int existing = same ? current.getCount() : 0;
+        if (room < 0) return existing;
+        if (!same) room += weight(current);
+        return (int) Math.min(stackLimit(incoming), existing + room / unitWeight(incoming));
+    }
+
+    public int replacementLimit(int slot, ItemStack stack) {
+        long room = capacity() - usedWeight();
+        return room < 0 ? 0 : (int) Math.min(stackLimit(stack), (room + weight(inventory.getItem(slot))) / unitWeight(stack));
+    }
+
+    private int unitWeight(ItemStack stack) {
+        return footprint(StorageConfig.FOOTPRINT_FACTOR.get(), stack.getMaxStackSize());
+    }
+
+    /** Inserts into a specific slot while leaving the mutable input as the remainder. */
+    public int insertAt(int slot, ItemStack input, int requested) {
+        if (input.isEmpty() || requested <= 0) return 0;
+        ItemStack current = inventory.getItem(slot);
+        if (current == input || (!current.isEmpty() && !matches(current, input))) return 0;
+        int limit = isStorageSlot(slot) ? slotLimit(slot, input) : stackLimit(input);
+        return put(slot, input, Math.min(requested, limit - current.getCount()));
+    }
+
+    public int insert(ItemStack input, int requested) {
+        if (input.isEmpty() || requested <= 0) return 0;
+        long room = Math.max(0, capacity() - usedWeight());
+        int fit = (int) Math.min(Math.min(requested, input.getCount()),
+                room / footprint(StorageConfig.FOOTPRINT_FACTOR.get(), input.getMaxStackSize()));
+        if (fit == 0) return 0;
+
+        int remaining = fit;
+        int size = inventory.getContainerSize();
+        for (int slot = FIRST; slot < size && remaining > 0; slot++) {
+            if (isStorageSlot(slot)) {
+                ItemStack current = inventory.getItem(slot);
+                if (current != input && matches(current, input) && current.isStackable()) {
+                    remaining -= put(slot, input, Math.min(remaining, stackLimit(current) - current.getCount()));
+                }
+            }
+        }
+        for (int slot = FIRST; slot < size && remaining > 0; slot++) {
+            if (isStorageSlot(slot) && inventory.getItem(slot).isEmpty()) {
+                remaining -= put(slot, input, Math.min(remaining, stackLimit(input)));
+            }
+        }
+        while (remaining > 0) {
+            ItemStack stack = input.split(Math.min(remaining, stackLimit(input)));
+            overflow.add(stack);
+            remaining -= stack.getCount();
+        }
+        inventory.setChanged();
+        return fit;
+    }
+
+    private int put(int slot, ItemStack input, int count) {
+        int moved = Math.min(input.getCount(), count);
+        if (moved <= 0) return 0;
+        ItemStack current = inventory.getItem(slot);
+        if (current.isEmpty()) {
+            inventory.setItem(slot, input.split(moved));
+        } else {
+            input.shrink(moved);
+            current.grow(moved);
+        }
+        inventory.setChanged();
+        return moved;
+    }
+
+    /** Vanilla additions fill the hotbar first. Explicit targets retain their slot semantics. */
+    public int add(int slot, ItemStack input) {
+        int initial = input.getCount();
+        if (slot != -1) {
+            if (slot >= 0 && slot < inventory.getContainerSize()) insertAt(slot, input, initial);
+            return initial - input.getCount();
+        }
+        insertMatchingHotbar(input);
+        for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
+            if (inventory.items.get(i).isEmpty()) insertAt(i, input, input.getCount());
+        }
+        insert(input, input.getCount());
+        return initial - input.getCount();
+    }
+
+    public int insertMatchingHotbar(ItemStack input) {
+        int initial = input.getCount();
+        if (matches(inventory.getSelected(), input)) insertAt(inventory.selected, input, input.getCount());
+        if (matches(inventory.getItem(40), input)) insertAt(40, input, input.getCount());
+        for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
+            if (i != inventory.selected && matches(inventory.items.get(i), input)) insertAt(i, input, input.getCount());
+        }
+        return initial - input.getCount();
+    }
+
+    public int hotbarRoom(ItemStack pattern) {
+        int room = 0;
+        for (int i = 0; i < FIRST; i++) {
+            ItemStack current = inventory.items.get(i);
+            if (current.isEmpty()) room += stackLimit(pattern);
+            else if (matches(current, pattern) && current.isStackable()) {
+                room += Math.max(0, stackLimit(current) - current.getCount());
+            }
+        }
+        return room;
+    }
+
+    public void putInHotbar(ItemStack input) {
+        if (matches(inventory.getSelected(), input)) insertAt(inventory.selected, input, input.getCount());
+        for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
+            if (i != inventory.selected && matches(inventory.items.get(i), input)) insertAt(i, input, input.getCount());
+        }
+        for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
+            if (inventory.items.get(i).isEmpty()) insertAt(i, input, input.getCount());
+        }
+    }
+
+    public ItemStack find(Predicate<ItemStack> match) {
+        for (int slot = FIRST; slot < inventory.getContainerSize(); slot++) {
+            if (isStorageSlot(slot)) {
+                ItemStack stack = inventory.getItem(slot);
+                if (!stack.isEmpty() && match.test(stack)) return stack;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public ItemStack take(ItemStack pattern, int requested) {
+        int remaining = Math.min(requested, stackLimit(pattern));
+        ItemStack taken = ItemStack.EMPTY;
+        for (int slot = FIRST; slot < inventory.getContainerSize() && remaining > 0; slot++) {
+            if (isStorageSlot(slot) && matches(inventory.getItem(slot), pattern)) {
+                ItemStack part = inventory.removeItem(slot, remaining);
+                remaining -= part.getCount();
+                if (taken.isEmpty()) taken = part;
+                else taken.grow(part.getCount());
+            }
+        }
+        if (!taken.isEmpty()) inventory.setChanged();
+        return taken;
+    }
+
+    public long count(ItemStack pattern) {
+        long count = 0;
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            if (slot < FIRST || isStorageSlot(slot)) {
+                ItemStack stack = inventory.getItem(slot);
+                if (matches(stack, pattern)) count += stack.getCount();
+            }
+        }
+        return count;
+    }
+
+    /** Check a batch of crafting-grid returns against simulated hotbar fills and one weight budget. */
+    public boolean canReturn(Iterable<ItemStack> stacks) {
+        ItemStack[] hotbar = new ItemStack[FIRST + 1];
+        for (int i = 0; i < FIRST; i++) hotbar[i] = inventory.items.get(i).copy();
+        hotbar[FIRST] = inventory.getItem(40).copy();
+        long remaining = Math.max(0, capacity() - usedWeight());
+        int factor = StorageConfig.FOOTPRINT_FACTOR.get();
+        for (ItemStack stack : stacks) {
+            if (stack.isEmpty()) continue;
+            int count = stack.getCount();
+            for (ItemStack current : hotbar) {
+                if (matches(current, stack)) {
+                    int move = Math.min(count, Math.max(0, stackLimit(current) - current.getCount()));
+                    current.grow(move);
+                    count -= move;
+                }
+            }
+            for (int i = 0; i < FIRST && count > 0; i++) {
+                if (hotbar[i].isEmpty()) {
+                    int move = Math.min(count, stackLimit(stack));
+                    hotbar[i] = stack.copyWithCount(move);
+                    count -= move;
+                }
+            }
+            remaining -= (long) count * footprint(factor, stack.getMaxStackSize());
+            if (remaining < 0) return false;
+        }
+        return true;
+    }
+
+    public void trimEmptyTail() {
+        while (!overflow.isEmpty() && overflow.get(overflow.size() - 1).isEmpty()) {
+            overflow.remove(overflow.size() - 1);
+        }
+    }
+
+    public CompoundTag save() {
+        CompoundTag data = new CompoundTag();
+        data.putInt("Version", 1);
+        ListTag stacks = new ListTag();
+        for (ItemStack stack : overflow) {
+            if (!stack.isEmpty()) stacks.add(stack.save(new CompoundTag()));
+        }
+        data.put("Overflow", stacks);
+        return data;
+    }
+
+    public void load(CompoundTag data) {
+        overflow.clear();
+        ListTag stacks = data.getList("Overflow", CompoundTag.TAG_COMPOUND);
+        for (int i = 0; i < stacks.size(); i++) {
+            ItemStack stack = ItemStack.of(stacks.getCompound(i));
+            if (!stack.isEmpty()) overflow.add(stack);
+        }
+    }
+
+    public void copyOverflow(Backpack source) {
+        if (source == this) return;
+        overflow.clear();
+        for (ItemStack stack : source.overflow) overflow.add(stack.copy());
+    }
+}

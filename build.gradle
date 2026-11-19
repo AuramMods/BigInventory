@@ -1,8 +1,20 @@
+buildscript {
+    repositories { maven { url = 'https://maven.minecraftforge.net/' } }
+    dependencies { classpath 'org.spongepowered:mixingradle:0.7.38' }
+}
+
 plugins {
     id 'java'
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '6.0.54'
+}
+
+apply plugin: 'org.spongepowered.mixin'
+
+mixin {
+    add sourceSets.main, 'biginventory.refmap.json'
+    config 'biginventory.mixins.json'
 }
 
 group = 'dev.auram.biginventory'
@@ -34,6 +46,10 @@ minecraft {
 }
 
 repositories {
+    maven {
+        url = 'https://maven.theillusivec4.top/'
+        content { includeGroup 'top.theillusivec4.curios' }
+    }
     flatDir {
         dirs 'dev-mods'
         content { includeGroup 'auram.local' }
@@ -42,6 +58,8 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    compileOnly fg.deobf('top.theillusivec4.curios:curios-forge:5.14.1+1.20.1:api')
     if (providers.gradleProperty('auramTestMods').getOrElse('true').toBoolean()) {
         file('dev-mods/auram.txt').readLines().each { coordinate ->
             runtimeOnly fg.deobf("auram.local:${coordinate}")
@@ -54,7 +72,10 @@ tasks.named('processResources') {
     filesMatching('META-INF/mods.toml') { expand modVersion: project.version }
 }
 
-tasks.named('jar') { finalizedBy 'reobfJar' }
+tasks.named('jar') {
+    manifest.attributes 'MixinConfigs': 'biginventory.mixins.json'
+    finalizedBy 'reobfJar'
+}
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 
 // Allow commands such as "stop" from a terminal running the dev server.
