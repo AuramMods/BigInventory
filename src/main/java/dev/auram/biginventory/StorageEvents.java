@@ -68,7 +68,7 @@ final class StorageEvents {
         long used = weight.used();
         long capacity = weight.capacity();
         updateEncumbrance(player, player.isAlive() && used > capacity);
-        StorageSessions.tick(player, used, capacity);
+        StorageSessions.tick(player, weight);
     }
 
     private static void updateEncumbrance(ServerPlayer player, boolean overweight) {

@@ -8,7 +8,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.SlotItemHandler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -58,11 +57,11 @@ final class StorageSessions {
         STATUS.remove(player.getUUID());
     }
 
-    static void tick(ServerPlayer player, long used, long capacity) {
+    static void tick(ServerPlayer player, StorageWeight weight) {
         Backpack backpack = Backpack.of(player.getInventory());
         ItemStack held = player.getMainHandItem();
         long count = held.isEmpty() ? 0 : backpack.count(held);
-        Hud status = new Hud(used, capacity, player.getInventory().selected, count);
+        Hud status = new Hud(weight.used(), weight.capacity(), player.getInventory().selected, count, weight.factor(), weight.endant());
         if (!status.equals(STATUS.put(player.getUUID(), status))) StorageNetwork.send(player, status);
         Viewer viewer = VIEWERS.get(player.getUUID());
         if (viewer == null) return;
@@ -78,9 +77,12 @@ final class StorageSessions {
         if (player == null) return;
         Viewer viewer = VIEWERS.get(player.getUUID());
         if (viewer == null || viewer.token != action.token() || viewer.menu != player.containerMenu
-                || viewer.menu.containerId != action.menu() || !validMenu(player, viewer.menu)) return;
+                || viewer.menu.containerId != action.menu() || !validMenu(player, viewer.menu)) {
+            StorageNetwork.send(player, new ViewAck(action.token(), 0));
+            return;
+        }
 
-        if (action.revision() == viewer.revision) {
+        if (action.revision() == viewer.revision || action.gesture() == Gesture.STORE_HOTBAR) {
             Backpack store = Backpack.of(player.getInventory());
             ItemStack carried = viewer.menu.getCarried();
             switch (action.gesture()) {
@@ -94,6 +96,11 @@ final class StorageSessions {
                     if (carried.isEmpty() && action.entry() >= 0 && action.entry() < viewer.sent) {
                         Entry selected = viewer.entries.get(action.entry());
                         take(player, viewer.menu, selected.icon(), action.gesture());
+                    }
+                }
+                case STORE_HOTBAR -> {
+                    if (viewer.menu instanceof InventoryMenu && action.entry() >= 0 && action.entry() < viewer.menu.slots.size()) {
+                        store.storeHotbarStack(viewer.menu.getSlot(action.entry()));
                     }
                 }
                 case CREATIVE_TRASH -> {
@@ -128,7 +135,7 @@ final class StorageSessions {
                     int available = available(inventory, pattern, offered);
                     if (available == 0) return;
                     ItemStack proposal = pattern.copyWithCount(available);
-                    moveToContainer(inventory, menu, proposal);
+                    StorageTransfers.moveToContainer(inventory, menu, proposal);
                     store.take(pattern, available - proposal.getCount());
                 }
             }
@@ -146,39 +153,6 @@ final class StorageSessions {
             }
         }
         return Math.min(count, limit);
-    }
-
-    private static void moveToContainer(Inventory inventory, AbstractContainerMenu menu, ItemStack proposal) {
-        List<Slot> targets = new ArrayList<>();
-        for (Slot slot : menu.slots) {
-            if (slot.isActive() && MenuPlayerSlots.index(slot, inventory) < 0) targets.add(slot);
-        }
-        // Fill matching stacks first, then use empty slots. Debit only the count the destination accepted.
-        for (Slot slot : targets) {
-            if (proposal.isEmpty()) return;
-            if (Backpack.matches(slot.getItem(), proposal)) insertInto(slot, proposal);
-        }
-        for (Slot slot : targets) {
-            if (proposal.isEmpty()) return;
-            if (!slot.hasItem()) insertInto(slot, proposal);
-        }
-    }
-
-    private static void insertInto(Slot slot, ItemStack proposal) {
-        if (!slot.mayPlace(proposal)) return;
-        ItemStack current = slot.getItem();
-        if (slot instanceof SlotItemHandler wrapped) {
-            int offered = Math.min(proposal.getCount(), slot.getMaxStackSize() - current.getCount());
-            if (offered <= 0) return;
-            ItemStack remainder = wrapped.getItemHandler().insertItem(slot.getSlotIndex(), proposal.copyWithCount(offered), false);
-            proposal.shrink(offered - remainder.getCount());
-        } else {
-            int moved = Math.min(proposal.getCount(), slot.getMaxStackSize(proposal) - current.getCount());
-            if (moved <= 0) return;
-            ItemStack placed = (current.isEmpty() ? proposal : current).copyWithCount(current.getCount() + moved);
-            slot.setByPlayer(placed);
-            proposal.shrink(moved);
-        }
     }
 
     private static boolean validMenu(ServerPlayer player, AbstractContainerMenu menu) {

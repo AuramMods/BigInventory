@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class StorageNetwork {
-    private static final String VERSION = "3";
+    private static final String VERSION = "4";
     private static final int PAGE_SIZE = 24;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
@@ -52,12 +52,14 @@ public final class StorageNetwork {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
     }
 
-    public record Hud(long used, long capacity, int slot, long heldCount) {
+    public record Hud(long used, long capacity, int slot, long heldCount, int footprintFactor, boolean endant) {
         void encode(FriendlyByteBuf buf) {
             buf.writeVarLong(used).writeVarLong(capacity).writeVarInt(slot).writeVarLong(heldCount);
+            buf.writeVarInt(footprintFactor).writeBoolean(endant);
         }
         static Hud decode(FriendlyByteBuf buf) {
-            return new Hud(buf.readVarLong(), buf.readVarLong(), buf.readVarInt(), buf.readVarLong());
+            return new Hud(buf.readVarLong(), buf.readVarLong(), buf.readVarInt(), buf.readVarLong(),
+                    buf.readVarInt(), buf.readBoolean());
         }
     }
 
@@ -104,7 +106,7 @@ public final class StorageNetwork {
         }
     }
 
-    public enum Gesture { DEPOSIT, DEPOSIT_ONE, TAKE, TAKE_HALF, SHIFT_TAKE, CREATIVE_TRASH, CREATIVE_CLEAR }
+    public enum Gesture { DEPOSIT, DEPOSIT_ONE, TAKE, TAKE_HALF, SHIFT_TAKE, CREATIVE_TRASH, CREATIVE_CLEAR, STORE_HOTBAR }
 
     public record Action(int menu, int token, int revision, int entry, Gesture gesture) {
         void encode(FriendlyByteBuf buf) {

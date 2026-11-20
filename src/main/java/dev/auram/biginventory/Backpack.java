@@ -4,6 +4,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Predicate;
@@ -43,7 +44,7 @@ public final class Backpack {
         return !a.isEmpty() && !b.isEmpty() && ItemStack.isSameItemSameTags(a, b);
     }
 
-    static CompoundTag variantKey(ItemStack stack) {
+    public static CompoundTag variantKey(ItemStack stack) {
         CompoundTag key = stack.save(new CompoundTag());
         key.remove("Count");
         return key;
@@ -121,6 +122,15 @@ public final class Backpack {
         }
         inventory.setChanged();
         return fit;
+    }
+
+    public void storeHotbarStack(Slot slot) {
+        if (slot.container != inventory || !Inventory.isHotbarSlot(slot.getSlotIndex()) || !slot.mayPickup(inventory.player)) return;
+        ItemStack stack = slot.getItem();
+        if (insert(stack, stack.getCount()) > 0) {
+            if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
+            slot.onTake(inventory.player, stack);
+        }
     }
 
     private int put(int slot, ItemStack input, int count) {

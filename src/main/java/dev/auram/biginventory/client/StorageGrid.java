@@ -10,7 +10,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
@@ -117,8 +116,8 @@ final class StorageGrid {
         }
     }
 
-    void tooltip(GuiGraphics graphics, ItemStack carried, int mouseX, int mouseY) {
-        if (!carried.isEmpty()) return;
+    void tooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (!view.renderedCarried().isEmpty()) return;
         int index = indexUnderMouse(mouseX, mouseY);
         if (index < 0 || index >= filtered.size()) return;
         Entry entry = filtered.get(index);
@@ -127,7 +126,7 @@ final class StorageGrid {
         graphics.renderTooltip(font, lines, entry.icon().getTooltipImage(), entry.icon(), mouseX, mouseY);
     }
 
-    boolean click(double mouseX, double mouseY, int button, ItemStack carried) {
+    boolean click(double mouseX, double mouseY, int button) {
         if (!inside(mouseX, mouseY) || button > 1) return false;
         refresh();
         if (mouseX >= railX()) {
@@ -139,7 +138,7 @@ final class StorageGrid {
                 dragging = true;
                 drag(mouseY);
             }
-        } else if (!carried.isEmpty()) {
+        } else if (!view.menu.getCarried().isEmpty()) {
             view.act(-1, button == 0 ? Gesture.DEPOSIT : Gesture.DEPOSIT_ONE);
         } else {
             int index = indexUnderMouse(mouseX, mouseY);
@@ -173,7 +172,7 @@ final class StorageGrid {
     private void refresh() {
         if (displayedChange != view.changes) {
             displayedChange = view.changes;
-            filtered = view.entries.stream().filter(entry -> query.isEmpty()
+            filtered = view.displayedEntries().stream().filter(entry -> query.isEmpty()
                     || entry.icon().getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
                     || String.valueOf(ForgeRegistries.ITEMS.getKey(entry.icon().getItem())).contains(query)).toList();
         }

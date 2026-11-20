@@ -28,7 +28,7 @@ final class BackpackChestScreen extends ContainerScreen {
         imageHeight = chestBottom + (searchVisible ? 106 : 96);
         inventoryLabelY = -30000;
         super.init();
-        if (view == null) view = ClientStorage.open(menu.containerId);
+        if (view == null) view = ClientStorage.open(menu);
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, inventory);
         playerSlots.arrange(0, imageHeight - 24);
         String query = searchVisible && grid != null ? grid.search().getValue() : "";
@@ -53,7 +53,7 @@ final class BackpackChestScreen extends ContainerScreen {
     @Override
     public void render(GuiGraphics graphics, int x, int y, float time) {
         super.render(graphics, x, y, time);
-        grid.tooltip(graphics, menu.getCarried(), x, y);
+        grid.tooltip(graphics, x, y);
     }
 
     @Override
@@ -64,7 +64,7 @@ final class BackpackChestScreen extends ContainerScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (grid.click(x, y, button, menu.getCarried())) {
+        if (grid.click(x, y, button)) {
             setFocused(null);
             return true;
         }

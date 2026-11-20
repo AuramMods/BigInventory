@@ -44,7 +44,7 @@ final class BackpackScreen extends InventoryScreen {
             }
         }
         boolean opening = view == null;
-        if (opening) view = ClientStorage.open(menu.containerId);
+        if (opening) view = ClientStorage.open(menu);
         if (playerSlots == null) {
             playerSlots = new PlayerSlots(menu, player.getInventory());
             int craftingX = PREVIEW_LEFT + PREVIEW_WIDTH + 2;
@@ -104,7 +104,7 @@ final class BackpackScreen extends InventoryScreen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float time) {
         super.render(graphics, mouseX, mouseY, time);
-        if (showGrid()) grid.tooltip(graphics, menu.getCarried(), mouseX, mouseY);
+        if (showGrid()) grid.tooltip(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -115,7 +115,7 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (showGrid() && grid.click(x, y, button, menu.getCarried())) {
+        if (showGrid() && grid.click(x, y, button)) {
             setFocused(null);
             return true;
         }

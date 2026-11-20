@@ -44,7 +44,7 @@ public final class ContainerBackpack {
             if (legacy[i] == null || legacy[i].x != x + (i % 9) * 18 || legacy[i].y != y + (i / 9) * 18) return;
         }
 
-        ClientStorage.View view = ClientStorage.open(screen.getMenu().containerId);
+        ClientStorage.View view = ClientStorage.open(screen.getMenu());
         PlayerSlots slots = new PlayerSlots(screen.getMenu(), inventory);
         slots.hideBackpack();
         StorageGrid grid = new StorageGrid(view, Minecraft.getInstance().font, "");
@@ -68,14 +68,14 @@ public final class ContainerBackpack {
     @SubscribeEvent
     public static void tooltip(ScreenEvent.Render.Post event) {
         if (active != null && active.screen() == event.getScreen() && active.visible()) {
-            active.grid().tooltip(event.getGuiGraphics(), active.screen().getMenu().getCarried(), event.getMouseX(), event.getMouseY());
+            active.grid().tooltip(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
         }
     }
 
     @SubscribeEvent
     public static void click(ScreenEvent.MouseButtonPressed.Pre event) {
         if (active != null && active.screen() == event.getScreen() && active.visible()
-                && active.grid().click(event.getMouseX(), event.getMouseY(), event.getButton(), active.screen().getMenu().getCarried())) {
+                && active.grid().click(event.getMouseX(), event.getMouseY(), event.getButton())) {
             active.screen().setFocused(null);
             event.setCanceled(true);
         }

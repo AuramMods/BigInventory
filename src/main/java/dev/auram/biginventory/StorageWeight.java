@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /** A storage snapshot that can also account for proposed changes without touching the items. */
-final class StorageWeight {
+public final class StorageWeight {
     private final int factor = StorageConfig.FOOTPRINT_FACTOR.get();
     private final boolean endant;
     private final Map<Variant, Long> quantities;
@@ -31,6 +31,10 @@ final class StorageWeight {
 
     long capacity() { return capacity; }
 
+    int factor() { return factor; }
+
+    boolean endant() { return endant; }
+
     void change(ItemStack stack, int count) {
         if (count == 0 || stack.isEmpty()) return;
         int maxStackSize = Math.max(1, stack.getMaxStackSize());
@@ -49,13 +53,24 @@ final class StorageWeight {
     }
 
     int fit(ItemStack stack, int limit) {
-        if (limit <= 0 || used() > capacity) return 0;
         int maxStackSize = Math.max(1, stack.getMaxStackSize());
-        int unit = Backpack.footprint(factor, maxStackSize);
-        if (!endant) return (int) Math.min(limit, (capacity - used()) / unit);
+        long currentCount = endant ? quantities.getOrDefault(new Variant(Backpack.variantKey(stack), maxStackSize), 0L) : 0L;
+        return fit(capacity, weight, factor, maxStackSize, currentCount, limit, endant);
+    }
 
-        long currentCount = quantities.getOrDefault(new Variant(Backpack.variantKey(stack), maxStackSize), 0L);
-        long fullPriceRemaining = Math.max(0, maxStackSize - currentCount);
+    public static double variantWeight(int factor, int maxStackSize, long count, boolean endant) {
+        int unit = Backpack.footprint(factor, maxStackSize);
+        return endant ? (count + Math.min(count, Math.max(1, maxStackSize))) * (unit / 2.0) : count * (double) unit;
+    }
+
+    public static int fit(long capacity, double weight, int factor, int maxStackSize,
+                          long currentCount, int limit, boolean endant) {
+        long used = (long) Math.floor(weight);
+        if (limit <= 0 || used > capacity) return 0;
+        int unit = Backpack.footprint(factor, maxStackSize);
+        if (!endant) return (int) Math.min(limit, (capacity - used) / unit);
+
+        long fullPriceRemaining = Math.max(0, Math.max(1, maxStackSize) - currentCount);
         int low = 0;
         int high = limit;
         while (low < high) {

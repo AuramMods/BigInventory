@@ -67,7 +67,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         if (opened) {
             // The picker still renders its native slots and tabs. Inventory clicks use menu zero.
             player.containerMenu = player.inventoryMenu;
-            view = ClientStorage.open(player.inventoryMenu.containerId, menu.getCarried());
+            view = ClientStorage.open(player.inventoryMenu, menu.getCarried());
             grid = new StorageGrid(view, font, "", StorageGrid.COMPACT_CELL);
             search = addRenderableWidget(grid.search());
         }
@@ -125,12 +125,12 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float time) {
         super.render(graphics, mouseX, mouseY, time);
-        if (isStorageOpen()) grid.tooltip(graphics, menu.getCarried(), mouseX, mouseY);
+        if (isStorageOpen()) grid.tooltip(graphics, mouseX, mouseY);
     }
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (isStorageOpen() && grid.click(x, y, button, menu.getCarried())) {
+        if (isStorageOpen() && grid.click(x, y, button)) {
             setFocused(null);
             gridClick = true;
             return true;
@@ -187,7 +187,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             super.slotClicked(slot, id, button, click);
             return;
         }
-        if (view.revision == 0 || view.pending) return;
+        if (view.revision == 0) return;
         int index = slot == null ? id : menu.slots.indexOf(slot);
         int inventorySize = player.inventoryMenu.slots.size();
         if (slot != null && index == inventorySize) {

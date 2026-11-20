@@ -32,13 +32,7 @@ abstract class ContainerMenuMixin {
         if (slot.container != inventory || !Inventory.isHotbarSlot(slot.getSlotIndex())) return;
 
         // Capacity is server-owned. Let the server sync the result of this click.
-        if (!player.level().isClientSide) {
-            ItemStack stack = slot.getItem();
-            if (Backpack.of(inventory).insert(stack, stack.getCount()) > 0) {
-                if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
-                slot.onTake(player, stack);
-            }
-        }
+        if (!player.level().isClientSide) Backpack.of(inventory).storeHotbarStack(slot);
         ci.cancel();
     }
 
