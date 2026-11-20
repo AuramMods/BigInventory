@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "group": "biginventory:pouch",
+  "pattern": [
+    "LNL",
+    "LWL",
+    "LLL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "N": {
+      "item": "minecraft:iron_nugget"
+    },
+    "W": {
+      "item": "minecraft:magenta_wool"
+    }
+  },
+  "result": {
+    "item": "biginventory:magenta_pouch"
+  }
+}

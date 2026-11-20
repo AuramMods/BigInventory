@@ -64,8 +64,9 @@ final class StorageEvents {
             }
         }
         storage.trimEmptyTail();
-        long used = storage.usedWeight();
-        long capacity = storage.capacity();
+        StorageWeight weight = storage.weightBudget();
+        long used = weight.used();
+        long capacity = weight.capacity();
         updateEncumbrance(player, player.isAlive() && used > capacity);
         StorageSessions.tick(player, used, capacity);
     }

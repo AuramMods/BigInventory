@@ -5,7 +5,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.ModList;
 
 import java.util.function.Predicate;
 
@@ -44,13 +43,14 @@ public final class Backpack {
         return !a.isEmpty() && !b.isEmpty() && ItemStack.isSameItemSameTags(a, b);
     }
 
+    static CompoundTag variantKey(ItemStack stack) {
+        CompoundTag key = stack.save(new CompoundTag());
+        key.remove("Count");
+        return key;
+    }
+
     public long capacity() {
-        long base = StorageConfig.BASE_CAPACITY.get();
-        var rules = StorageConfig.CURIO_CAPACITY.get();
-        if (!rules.isEmpty() && ModList.get().isLoaded("curios")) {
-            base += CuriosCapacity.adjustment(inventory.player, rules);
-        }
-        return Math.max(0, base);
+        return StorageEquipment.equipped(inventory.player).capacity(StorageConfig.BASE_CAPACITY.get());
     }
 
     public long weight(ItemStack stack) {
@@ -59,35 +59,30 @@ public final class Backpack {
     }
 
     public long usedWeight() {
-        long used = 0;
-        int factor = StorageConfig.FOOTPRINT_FACTOR.get();
-        for (int slot = FIRST; slot < inventory.getContainerSize(); slot++) {
-            if (isStorageSlot(slot)) {
-                ItemStack stack = inventory.getItem(slot);
-                if (!stack.isEmpty()) used += (long) stack.getCount() * footprint(factor, stack.getMaxStackSize());
-            }
-        }
-        return used;
+        return weightBudget().used();
     }
 
     public int slotLimit(int slot, ItemStack incoming) {
         if (incoming.isEmpty()) return stackLimit(incoming);
-        ItemStack current = inventory.getItem(slot);
-        long room = capacity() - usedWeight();
-        boolean same = matches(current, incoming);
-        int existing = same ? current.getCount() : 0;
-        if (room < 0) return existing;
-        if (!same) room += weight(current);
-        return (int) Math.min(stackLimit(incoming), existing + room / unitWeight(incoming));
+        return slotLimit(slot, incoming, true);
     }
 
     public int replacementLimit(int slot, ItemStack stack) {
-        long room = capacity() - usedWeight();
-        return room < 0 ? 0 : (int) Math.min(stackLimit(stack), (room + weight(inventory.getItem(slot))) / unitWeight(stack));
+        return slotLimit(slot, stack, false);
     }
 
-    private int unitWeight(ItemStack stack) {
-        return footprint(StorageConfig.FOOTPRINT_FACTOR.get(), stack.getMaxStackSize());
+    private int slotLimit(int slot, ItemStack incoming, boolean merge) {
+        ItemStack current = inventory.getItem(slot);
+        StorageWeight budget = weightBudget();
+        if (budget.used() > budget.capacity()) {
+            return merge && matches(current, incoming) ? current.getCount() : 0;
+        }
+        budget.change(current, -current.getCount());
+        return budget.fit(incoming, stackLimit(incoming));
+    }
+
+    StorageWeight weightBudget() {
+        return new StorageWeight(inventory, StorageEquipment.equipped(inventory.player));
     }
 
     /** Inserts into a specific slot while leaving the mutable input as the remainder. */
@@ -101,9 +96,7 @@ public final class Backpack {
 
     public int insert(ItemStack input, int requested) {
         if (input.isEmpty() || requested <= 0) return 0;
-        long room = Math.max(0, capacity() - usedWeight());
-        int fit = (int) Math.min(Math.min(requested, input.getCount()),
-                room / footprint(StorageConfig.FOOTPRINT_FACTOR.get(), input.getMaxStackSize()));
+        int fit = weightBudget().fit(input, Math.min(requested, input.getCount()));
         if (fit == 0) return 0;
 
         int remaining = fit;
@@ -232,8 +225,7 @@ public final class Backpack {
         ItemStack[] hotbar = new ItemStack[FIRST + 1];
         for (int i = 0; i < FIRST; i++) hotbar[i] = inventory.items.get(i).copy();
         hotbar[FIRST] = inventory.getItem(40).copy();
-        long remaining = Math.max(0, capacity() - usedWeight());
-        int factor = StorageConfig.FOOTPRINT_FACTOR.get();
+        StorageWeight budget = weightBudget();
         for (ItemStack stack : stacks) {
             if (stack.isEmpty()) continue;
             int count = stack.getCount();
@@ -251,8 +243,8 @@ public final class Backpack {
                     count -= move;
                 }
             }
-            remaining -= (long) count * footprint(factor, stack.getMaxStackSize());
-            if (remaining < 0) return false;
+            if (budget.fit(stack, count) < count) return false;
+            budget.change(stack, count);
         }
         return true;
     }

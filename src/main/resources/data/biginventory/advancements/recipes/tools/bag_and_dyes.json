@@ -1,0 +1,41 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_ingredient": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "biginventory:pouches"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_ingredient"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "biginventory:bag",
+      "biginventory:dye_white_pouch",
+      "biginventory:dye_orange_pouch",
+      "biginventory:dye_magenta_pouch",
+      "biginventory:dye_light_blue_pouch",
+      "biginventory:dye_yellow_pouch",
+      "biginventory:dye_lime_pouch",
+      "biginventory:dye_pink_pouch",
+      "biginventory:dye_gray_pouch",
+      "biginventory:dye_light_gray_pouch",
+      "biginventory:dye_cyan_pouch",
+      "biginventory:dye_purple_pouch",
+      "biginventory:dye_blue_pouch",
+      "biginventory:dye_brown_pouch",
+      "biginventory:dye_green_pouch",
+      "biginventory:dye_red_pouch",
+      "biginventory:dye_black_pouch"
+    ]
+  }
+}

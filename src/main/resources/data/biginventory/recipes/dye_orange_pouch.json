@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "equipment",
+  "group": "biginventory:dye_pouch",
+  "ingredients": [
+    {
+      "tag": "biginventory:pouches"
+    },
+    {
+      "tag": "forge:dyes/orange"
+    }
+  ],
+  "result": {
+    "item": "biginventory:orange_pouch"
+  }
+}

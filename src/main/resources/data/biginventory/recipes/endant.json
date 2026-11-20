@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "C",
+    "H",
+    "E"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:chain"
+    },
+    "H": {
+      "item": "minecraft:ender_chest"
+    },
+    "E": {
+      "item": "minecraft:end_crystal"
+    }
+  },
+  "result": {
+    "item": "biginventory:endant"
+  }
+}

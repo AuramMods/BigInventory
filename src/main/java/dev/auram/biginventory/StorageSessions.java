@@ -211,8 +211,7 @@ final class StorageSessions {
                 if (!Backpack.isStorageSlot(slot)) continue;
                 ItemStack stack = inv.getItem(slot);
                 if (stack.isEmpty()) continue;
-                CompoundTag key = stack.save(new CompoundTag());
-                key.remove("Count");
+                CompoundTag key = Backpack.variantKey(stack);
                 Entry existing = variants.get(key);
                 long overflow = slot >= Backpack.OVERFLOW_START ? stack.getCount() : 0;
                 if (existing == null) {

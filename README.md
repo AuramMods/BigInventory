@@ -10,6 +10,17 @@ The white ring beside the hotbar fills as you use storage. Crouch to see the per
 
 Server-side capacity defaults to 500. With the default footprint factor of 32, a cobblestone takes one unit, an empty bucket takes two, and an unstackable tool takes 32. If equipment changes put you over capacity, you keep your items and can withdraw them. Deposits resume when there is room. Movement slows by half and Mining Fatigue I applies while overloaded.
 
+### Curios accessories
+
+| Item | Slot | Effect |
+| --- | --- | --- |
+| Pouch | Hip | +98 capacity. The recipe takes its color from the wool, and any pouch can be recolored with dye. |
+| Bag | Hip | +352 capacity and +15% movement exhaustion per equipped bag. Applies to sprinting, jumping, and swimming. Three bags give +45%. |
+| Echo Ring | Ring | +50% of capacity after flat bonuses. Two rings give +100%. Craft with an echo shard above three gold ingots in a U shape. |
+| Endant | Necklace | Items beyond the first stack of each stored variant weigh half as much. Only one Endant can be equipped. |
+
+Curios gives players three Hip slots, two Ring slots, and one Necklace slot by default. Natural regeneration uses normal exhaustion. With an Endant, 128 stored cobblestone weigh 96. Fractional weight from all stored items is added together before the total is rounded down.
+
 ## Run the development client
 
 Use a Java 17 JDK and the included Gradle wrapper. The project targets Minecraft 1.20.1, Forge 47.4.10 and official 1.20.1 mappings.
@@ -35,7 +46,7 @@ echo eula=true > run-server/eula.txt
 
 The default world generates `run-server/world/serverconfig/biginventory-server.toml`. Its `[storage]` section contains `baseCapacity`, `footprintFactor`, `refillHotbar`, and `curioCapacity`. The footprint factor accepts integers from 1 through 8192. You can disable BigInventory's refill when testing another refill mod.
 
-With Curios installed, add one rule per item such as `"pack:rucksack=150"` or `"pack:cursed_ring@ring=-50"` to `curioCapacity`. A slot-specific amount takes precedence over the general amount for that item. Curios data controls which slots and items can be equipped.
+With Curios installed, add one rule per item such as `"pack:rucksack=150"` or `"pack:cursed_ring@ring=-50"` to `curioCapacity`. A slot-specific amount takes precedence over the general rule for that item. Configured changes are added to the built-in flat bonuses before Echo Rings are applied. Curios data controls slot counts and which items can be equipped.
 
 ## Build
 

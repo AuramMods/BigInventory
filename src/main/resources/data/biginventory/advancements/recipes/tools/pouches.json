@@ -1,0 +1,40 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_ingredient": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "minecraft:wool"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_ingredient"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "biginventory:white_pouch",
+      "biginventory:orange_pouch",
+      "biginventory:magenta_pouch",
+      "biginventory:light_blue_pouch",
+      "biginventory:yellow_pouch",
+      "biginventory:lime_pouch",
+      "biginventory:pink_pouch",
+      "biginventory:gray_pouch",
+      "biginventory:light_gray_pouch",
+      "biginventory:cyan_pouch",
+      "biginventory:purple_pouch",
+      "biginventory:blue_pouch",
+      "biginventory:brown_pouch",
+      "biginventory:green_pouch",
+      "biginventory:red_pouch",
+      "biginventory:black_pouch"
+    ]
+  }
+}
