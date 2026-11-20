@@ -26,6 +26,7 @@ import org.lwjgl.glfw.GLFW;
 public final class ContainerBackpack {
     private static final int NATIVE_ROWS = 3;
     private static final int BOTTOM_MARGIN = 4;
+    private static final int UPPER_SLOT_GAP = 3;
     private static Panel active;
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -62,11 +63,11 @@ public final class ContainerBackpack {
         for (int i = 0; aligned && i < hotbar.length; i++) {
             aligned = hotbar[i] != null && hotbar[i].x == x + i * StorageGrid.CELL && hotbar[i].y == hotbarY;
         }
+        int gridX = x - 1;
+        int gridY = y - 1;
         int available = Math.max(0, (screen.height - nativeHeight + 1) / 2 - BOTTOM_MARGIN);
-        int gap = aligned ? Math.min(StorageGrid.SEARCH_GAP, available) : 0;
-        int rows = aligned ? Mth.clamp(NATIVE_ROWS + (available - gap) / StorageGrid.CELL,
-                NATIVE_ROWS, StorageGrid.MAX_ROWS) : NATIVE_ROWS;
-        int extension = gap + (rows - NATIVE_ROWS) * StorageGrid.CELL;
+        PlayerSection section = aligned ? PlayerSection.fit(available, searchInset(screen, gridX, gridY))
+                : new PlayerSection(NATIVE_ROWS, 0, 0);
         var layout = (ContainerLayoutAccess) screen;
         Component label = layout.bigInventory$inventoryTitle();
         layout.bigInventory$setInventoryTitle(Component.empty());
@@ -74,11 +75,24 @@ public final class ContainerBackpack {
         ClientStorage.View view = ClientStorage.open(screen.getMenu());
         PlayerSlots slots = new PlayerSlots(screen.getMenu(), inventory);
         // Some containers build slot backgrounds from these coordinates during their own init.
-        if (aligned) slots.arrange(0, hotbarY + extension);
+        if (aligned) slots.arrange(0, hotbarY + section.hotbarShift());
         else slots.hideBackpack();
         StorageGrid grid = new StorageGrid(view, Minecraft.getInstance().font, query);
-        active = new Panel(screen, slots, grid, view, label, x - 1, y - 1, rows, gap,
-                nativeHeight, extension, aligned ? hotbarY + extension : -1);
+        active = new Panel(screen, slots, grid, view, label, gridX, gridY, nativeHeight,
+                aligned ? hotbarY : -1, section);
+    }
+
+    private static int searchInset(AbstractContainerScreen<?> screen, int gridX, int gridY) {
+        int top = gridY - StorageGrid.SEARCH_HEIGHT;
+        int searchY = top;
+        for (Slot slot : screen.getMenu().slots) {
+            int slotX = slot.x - 1;
+            int slotY = slot.y - 1;
+            if (slotY < gridY && slotX < gridX + StorageGrid.WIDTH && slotX + StorageGrid.CELL > gridX) {
+                searchY = Math.max(searchY, slotY + StorageGrid.CELL + UPPER_SLOT_GAP);
+            }
+        }
+        return searchY - top;
     }
 
     @SubscribeEvent
@@ -156,19 +170,40 @@ public final class ContainerBackpack {
     }
 
     public static int extendedHeight(AbstractContainerScreen<?> screen, int nativeHeight) {
-        return active != null && active.screen() == screen && active.visible() ? nativeHeight + active.extension() : nativeHeight;
+        return active != null && active.screen() == screen && active.visible()
+                ? nativeHeight + active.section().extension() : nativeHeight;
     }
 
     public static boolean insideExtension(AbstractContainerScreen<?> screen, double x, double y) {
         if (active == null || active.screen() != screen || !active.visible()) return false;
         int bottom = screen.getGuiTop() + active.nativeHeight();
         int left = screen.getGuiLeft();
-        return y >= bottom && y < bottom + active.extension() && x >= left && x < left + screen.getXSize();
+        return y >= bottom && y < bottom + active.section().extension() && x >= left && x < left + screen.getXSize();
+    }
+
+    private record PlayerSection(int rows, int searchInset, int gap) {
+        static PlayerSection fit(int available, int searchInset) {
+            int gap = Mth.clamp(available - searchInset, 0, StorageGrid.SEARCH_GAP);
+            int extra = Math.floorDiv(available - searchInset - gap, StorageGrid.CELL);
+            return new PlayerSection(Mth.clamp(NATIVE_ROWS + extra, 1, StorageGrid.MAX_ROWS), searchInset, gap);
+        }
+
+        int gridInset() {
+            return searchInset + gap;
+        }
+
+        int hotbarShift() {
+            return gridInset() + (rows - NATIVE_ROWS) * StorageGrid.CELL;
+        }
+
+        int extension() {
+            return Math.max(0, hotbarShift());
+        }
     }
 
     private record Panel(AbstractContainerScreen<?> screen, PlayerSlots slots, StorageGrid grid,
-                         ClientStorage.View view, Component label, int gridX, int nativeGridY, int rows,
-                         int gap, int nativeHeight, int extension, int hotbarY) {
+                         ClientStorage.View view, Component label, int gridX, int nativeGridY,
+                         int nativeHeight, int nativeHotbarY, PlayerSection section) {
         boolean visible() {
             return !(screen instanceof RecipeUpdateListener recipe && recipe.getRecipeBookComponent().isVisible()
                     && screen.width < 379);
@@ -177,8 +212,7 @@ public final class ContainerBackpack {
         void layout() {
             int x = screen.getGuiLeft() + gridX;
             int y = screen.getGuiTop() + nativeGridY;
-            grid.bounds(x, y + gap, rows);
-            grid.search().setPosition(x, y - StorageGrid.SEARCH_HEIGHT);
+            grid.bounds(x, y + section.gridInset(), section.rows(), section.gap());
             boolean gridVisible = visible();
             grid.search().visible = gridVisible;
             if (!gridVisible) grid.cancelAnimation();
@@ -189,11 +223,14 @@ public final class ContainerBackpack {
             int left = screen.getGuiLeft();
             int top = screen.getGuiTop();
             int x = left + gridX;
+            int extension = section.extension();
             if (extension > 0) InventorySkin.extendPanel(graphics, left, top + nativeHeight, screen.getXSize(), extension);
-            if (hotbarY >= 0) {
-                int slotTop = top + hotbarY - 1;
+            if (nativeHotbarY >= 0) {
+                int nativeHotbarTop = top + nativeHotbarY - 1;
+                int slotTop = nativeHotbarTop + section.hotbarShift();
                 int sectionTop = top + nativeGridY;
-                InventorySkin.fill(graphics, x, sectionTop, StorageGrid.WIDTH, slotTop - sectionTop, InventorySkin.Tone.PANEL);
+                int backgroundBottom = Math.max(slotTop, nativeHotbarTop + StorageGrid.CELL);
+                InventorySkin.fill(graphics, x, sectionTop, StorageGrid.WIDTH, backgroundBottom - sectionTop, InventorySkin.Tone.PANEL);
                 for (int column = 0; column < StorageGrid.COLUMNS; column++) {
                     InventorySkin.slot(graphics, x + column * StorageGrid.CELL, slotTop);
                 }

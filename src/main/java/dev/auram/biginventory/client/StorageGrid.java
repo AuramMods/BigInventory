@@ -15,12 +15,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 final class StorageGrid {
     static final int CELL = 18;
@@ -38,7 +36,7 @@ final class StorageGrid {
     private final Font font;
     private final StorageSearchBox search;
     private List<Entry> filtered = List.of();
-    private String query = "";
+    private StorageSearchQuery query;
     private int displayedChange = -1;
     private int x;
     private int y;
@@ -61,18 +59,22 @@ final class StorageGrid {
         search.setResponder(text -> {
             cancelAnimation();
             dragging = false;
-            query = text.toLowerCase(Locale.ROOT).strip();
+            query = StorageSearchQuery.parse(text);
             displayedChange = -1;
             targetRow = 0;
             scrollPosition = 0;
         });
-        query = priorSearch.toLowerCase(Locale.ROOT).strip();
+        query = StorageSearchQuery.parse(priorSearch);
         view.grid = this;
     }
 
     StorageSearchBox search() { return search; }
 
     void bounds(int x, int y, int rows) {
+        bounds(x, y, rows, SEARCH_GAP);
+    }
+
+    void bounds(int x, int y, int rows, int searchGap) {
         if (this.x != x || this.y != y || this.rows != rows) {
             cancelAnimation();
             dragging = false;
@@ -80,7 +82,7 @@ final class StorageGrid {
         this.x = x;
         this.y = y;
         this.rows = rows;
-        search.setPosition(x, y - SEARCH_HEIGHT - SEARCH_GAP);
+        search.setPosition(x, y - SEARCH_HEIGHT - searchGap);
     }
 
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -222,8 +224,7 @@ final class StorageGrid {
 
     private List<Entry> filter(List<Entry> entries) {
         if (query.isEmpty()) return entries;
-        return entries.stream().filter(entry -> entry.icon().getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
-                || String.valueOf(ForgeRegistries.ITEMS.getKey(entry.icon().getItem())).contains(query)).toList();
+        return entries.stream().filter(entry -> query.matches(entry.icon())).toList();
     }
 
     void startAnimation(AbstractContainerScreen<?> screen, StoragePrediction preview) {

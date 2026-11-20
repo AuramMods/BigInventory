@@ -17,7 +17,9 @@ import javax.annotation.Nullable;
 
 public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     private static final int ROWS = 3;
-    private static final int GRID_TOP = 50 + StorageGrid.SEARCH_HEIGHT + 4;
+    private static final int EQUIPMENT_BOTTOM = 50;
+    private static final int SEARCH_PADDING = 3;
+    private static final int GRID_TOP = EQUIPMENT_BOTTOM + SEARCH_PADDING + StorageGrid.SEARCH_HEIGHT + SEARCH_PADDING;
     private static final int HOTBAR_TOP = GRID_TOP + ROWS * StorageGrid.CELL + 4;
     private static final int INVENTORY_HEIGHT = HOTBAR_TOP + 22;
 
@@ -81,7 +83,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             grid = new StorageGrid(view, font, "");
             search = addRenderableWidget(grid.search());
         }
-        grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS);
+        grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS, SEARCH_PADDING);
         if (opened) setInitialFocus(search);
     }
 
