@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -21,19 +22,21 @@ final class StorageGrid {
     static final int CELL = 17;
     static final int COMPACT_CELL = 14;
     static final int SEARCH_HEIGHT = StorageSearchBox.HEIGHT;
-    private static final int RAIL_WIDTH = 7;
-    static final int SCROLLBAR_SPACE = RAIL_WIDTH + 2;
+    static final int HOTBAR_WIDTH = Inventory.getSelectionSize() * 18;
+    private static final int RAIL_GAP = 2;
+    private static final int MIN_RAIL_WIDTH = 6;
     private static final float COUNT_SCALE = 0.625f;
     private final ClientStorage.View view;
     private final Font font;
     private final EditBox search;
     private final int cellSize;
+    private final int columns;
+    private final int railWidth;
     private List<Entry> filtered = List.of();
     private String query = "";
     private int displayedChange = -1;
     private int x;
     private int y;
-    private int columns;
     private int rows;
     private int rowOffset;
     private boolean dragging;
@@ -47,7 +50,10 @@ final class StorageGrid {
         this.view = view;
         this.font = font;
         this.cellSize = cellSize;
+        columns = (HOTBAR_WIDTH - RAIL_GAP - MIN_RAIL_WIDTH) / cellSize;
+        railWidth = HOTBAR_WIDTH - columns * cellSize - RAIL_GAP;
         search = new StorageSearchBox(font);
+        search.setWidth(HOTBAR_WIDTH);
         search.setMaxLength(96);
         search.setValue(priorSearch);
         search.setResponder(text -> {
@@ -60,13 +66,11 @@ final class StorageGrid {
 
     EditBox search() { return search; }
 
-    void bounds(int x, int y, int columns, int rows) {
+    void bounds(int x, int y, int rows) {
         this.x = x;
         this.y = y;
-        this.columns = columns;
         this.rows = rows;
         search.setPosition(x, y - SEARCH_HEIGHT - 4);
-        search.setWidth(columns * cellSize + RAIL_WIDTH - 2);
     }
 
     void searchBelowGrid() {
@@ -95,11 +99,11 @@ final class StorageGrid {
         }
         int railX = railX();
         int length = rows * cellSize - 1;
-        InventorySkin.well(graphics, railX, y, RAIL_WIDTH, length, 0xff858585);
+        InventorySkin.well(graphics, railX, y, railWidth, length, 0xff858585);
         int thumb = thumbHeight();
         int offset = maxRow() == 0 ? 0 : (length - thumb) * rowOffset / maxRow();
         if (maxRow() > 0) {
-            graphics.fill(railX + 1, y + offset, railX + RAIL_WIDTH - 1, y + offset + thumb, 0xffdcdcdc);
+            graphics.fill(railX + 1, y + offset, railX + railWidth - 1, y + offset + thumb, 0xffdcdcdc);
         }
     }
 
@@ -172,10 +176,10 @@ final class StorageGrid {
     }
 
     private boolean inside(double mx, double my) {
-        return mx >= x && mx < railX() + RAIL_WIDTH && my >= y && my < y + rows * cellSize;
+        return mx >= x && mx < x + HOTBAR_WIDTH && my >= y && my < y + rows * cellSize;
     }
 
-    private int railX() { return x + columns * cellSize + 2; }
+    private int railX() { return x + columns * cellSize + RAIL_GAP; }
 
     private int totalRows() { return (filtered.size() + columns - 1) / columns; }
 

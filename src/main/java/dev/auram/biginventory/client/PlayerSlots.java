@@ -1,6 +1,7 @@
 package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.Backpack;
+import dev.auram.biginventory.MenuPlayerSlots;
 import dev.auram.biginventory.mixin.SlotPosition;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -15,9 +16,9 @@ final class PlayerSlots {
 
     PlayerSlots(AbstractContainerMenu menu, Inventory inventory) {
         for (Slot slot : menu.slots) {
-            if (slot.container == inventory && (slot.getSlotIndex() < Backpack.FIRST
-                    || Backpack.isStorageSlot(slot.getSlotIndex()))) {
-                slots.add(new Position(slot, slot.x, slot.y));
+            int index = MenuPlayerSlots.index(slot, inventory);
+            if (Inventory.isHotbarSlot(index) || Backpack.isStorageSlot(index)) {
+                slots.add(new Position(slot, index, slot.x, slot.y));
             }
         }
     }
@@ -25,7 +26,7 @@ final class PlayerSlots {
     void arrange(int hotbarOffsetX, int hotbarY) {
         for (Position pos : slots) {
             SlotPosition access = (SlotPosition) pos.slot();
-            if (Inventory.isHotbarSlot(pos.slot().getSlotIndex())) {
+            if (Inventory.isHotbarSlot(pos.index())) {
                 access.bigInventory$setX(pos.x() + hotbarOffsetX);
                 access.bigInventory$setY(hotbarY);
             } else {
@@ -36,7 +37,7 @@ final class PlayerSlots {
 
     void hideBackpack() {
         for (Position pos : slots) {
-            if (Backpack.isStorageSlot(pos.slot().getSlotIndex())) {
+            if (Backpack.isStorageSlot(pos.index())) {
                 ((SlotPosition) pos.slot()).bigInventory$setX(-30000);
             }
         }
@@ -50,5 +51,5 @@ final class PlayerSlots {
         }
     }
 
-    private record Position(Slot slot, int x, int y) {}
+    private record Position(Slot slot, int index, int x, int y) {}
 }

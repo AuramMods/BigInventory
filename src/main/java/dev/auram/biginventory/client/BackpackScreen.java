@@ -10,7 +10,6 @@ import org.lwjgl.glfw.GLFW;
 final class BackpackScreen extends InventoryScreen {
     private static final int HEADER = 86;
     private static final int FOOTER = 26 + StorageGrid.SEARCH_HEIGHT + 3;
-    private static final int COLUMNS = 9;
     private final Player player;
     private ClientStorage.View view;
     private PlayerSlots playerSlots;
@@ -53,8 +52,7 @@ final class BackpackScreen extends InventoryScreen {
     private void layoutControls() {
         if (grid == null) return;
         if (recipeButton != null) recipeButton.setPosition(leftPos + 104, topPos + 61);
-        grid.bounds(leftPos + (imageWidth - COLUMNS * StorageGrid.COMPACT_CELL - StorageGrid.SCROLLBAR_SPACE) / 2,
-                topPos + HEADER, COLUMNS, rows);
+        grid.bounds(leftPos + 7, topPos + HEADER, rows);
         grid.searchBelowGrid();
         grid.search().visible = showGrid();
         if (!showGrid() && getFocused() == grid.search()) setFocused(null);

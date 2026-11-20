@@ -4,7 +4,7 @@ BigInventory replaces the player backpack with weight-limited storage on Minecra
 
 ## Play
 
-Open the inventory and search by item name or registry ID. Left-click a matching entry to take up to one stack. Right-click to take half of that amount. Click the grid while carrying a stack to deposit it, or right-click to deposit one. Shift-click a grid entry to move it to the hotbar, or directly into an open chest. Scroll the grid to reach more entries.
+Open the inventory and search by item name or registry ID. Left-click a matching entry to take up to one stack. Right-click to take half of that amount. Click the grid while carrying a stack to deposit it, or right-click to deposit one. In your own inventory, shift-click to move items between the hotbar and storage. With a chest or another supported container open, shift-click a storage entry to send it to the container. Scroll the grid to reach more entries.
 
 The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
 

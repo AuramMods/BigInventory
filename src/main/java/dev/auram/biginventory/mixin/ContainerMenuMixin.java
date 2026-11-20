@@ -6,6 +6,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Final;
@@ -20,6 +21,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(AbstractContainerMenu.class)
 abstract class ContainerMenuMixin {
     @Shadow @Final public NonNullList<Slot> slots;
+
+    @Inject(method = "doClick", at = @At(value = "INVOKE", ordinal = 0,
+            target = "Lnet/minecraft/world/inventory/AbstractContainerMenu;quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;"),
+            cancellable = true)
+    private void bigInventory$storeHotbarStack(int slotIndex, int button, ClickType click, Player player, CallbackInfo ci) {
+        if (!((Object) this instanceof InventoryMenu)) return;
+        Inventory inventory = player.getInventory();
+        Slot slot = slots.get(slotIndex);
+        if (slot.container != inventory || !Inventory.isHotbarSlot(slot.getSlotIndex())) return;
+
+        // Capacity is server-owned. Let the server sync the result of this click.
+        if (!player.level().isClientSide) {
+            ItemStack stack = slot.getItem();
+            if (Backpack.of(inventory).insert(stack, stack.getCount()) > 0) {
+                if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
+                slot.onTake(player, stack);
+            }
+        }
+        ci.cancel();
+    }
 
     @Inject(method = "doClick", at = @At("HEAD"), cancellable = true)
     private void bigInventory$protectStorageSwap(int slotIndex, int button, ClickType click, Player player, CallbackInfo ci) {

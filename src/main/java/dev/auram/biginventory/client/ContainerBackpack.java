@@ -2,6 +2,7 @@ package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.Backpack;
 import dev.auram.biginventory.BigInventory;
+import dev.auram.biginventory.MenuPlayerSlots;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -25,17 +26,14 @@ public final class ContainerBackpack {
         if (!(event.getScreen() instanceof AbstractContainerScreen<?> screen)
                 || screen instanceof BackpackScreen || screen instanceof BackpackChestScreen
                 || screen instanceof CreativeModeInventoryScreen) return;
-        String owner = screen.getClass().getPackageName();
-        if (!owner.equals("net.minecraft.client.gui.screens.inventory")
-                && !owner.equals("top.theillusivec4.curios.client.gui")) return;
         if (active != null) close();
         var player = Minecraft.getInstance().player;
         if (player == null || player.isSpectator()) return;
         Inventory inventory = player.getInventory();
         Slot[] legacy = new Slot[Backpack.LEGACY_END - Backpack.FIRST];
         for (Slot slot : screen.getMenu().slots) {
-            int index = slot.getSlotIndex();
-            if (slot.container == inventory && index >= Backpack.FIRST && index < Backpack.LEGACY_END) {
+            int index = MenuPlayerSlots.index(slot, inventory);
+            if (index >= Backpack.FIRST && index < Backpack.LEGACY_END) {
                 legacy[index - Backpack.FIRST] = slot;
             }
         }
@@ -60,9 +58,9 @@ public final class ContainerBackpack {
         if (active == null || active.screen() != event.getContainerScreen()) return;
         active.layout();
         if (active.visible()) {
-            int x = active.screen().getGuiLeft() + active.slotX();
+            int x = active.screen().getGuiLeft() + active.slotX() - 1;
             int y = active.screen().getGuiTop() + active.slotY();
-            event.getGuiGraphics().fill(x - 1, y - 1, x + 161, y + 53, InventorySkin.FACE);
+            event.getGuiGraphics().fill(x, y - 1, x + StorageGrid.HOTBAR_WIDTH, y + 53, InventorySkin.FACE);
             active.grid().render(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
         }
     }
@@ -127,9 +125,9 @@ public final class ContainerBackpack {
         }
 
         void layout() {
-            int x = screen.getGuiLeft() + slotX;
+            int x = screen.getGuiLeft() + slotX - 1;
             int y = screen.getGuiTop() + slotY;
-            grid.bounds(x, y, 9, 3);
+            grid.bounds(x, y, 3);
             int searchY = screen.getGuiTop() - StorageGrid.SEARCH_HEIGHT - 4;
             if (searchY < 0) searchY = screen.getGuiTop() + screen.getYSize() + 4;
             grid.search().setPosition(x, searchY);

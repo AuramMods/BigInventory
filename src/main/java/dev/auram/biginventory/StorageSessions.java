@@ -1,14 +1,14 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.StorageNetwork.*;
-import dev.auram.biginventory.mixin.MenuTransfer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.items.SlotItemHandler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -117,43 +117,74 @@ final class StorageSessions {
     }
 
     private static void take(ServerPlayer player, AbstractContainerMenu menu, ItemStack pattern, Gesture action) {
-        Backpack store = Backpack.of(player.getInventory());
+        Inventory inventory = player.getInventory();
+        Backpack store = Backpack.of(inventory);
         int offered = Backpack.stackLimit(pattern);
-        if (action == Gesture.SHIFT_TAKE && menu instanceof ChestMenu chest) {
-            // Try the vanilla chest destination first. Withdraw only what it actually accepted.
-            int available = 0;
-            Inventory inv = player.getInventory();
-            for (int slot = Backpack.FIRST; slot < inv.getContainerSize() && available < offered; slot++) {
-                if (Backpack.isStorageSlot(slot) && Backpack.matches(inv.getItem(slot), pattern)) {
-                    available += inv.getItem(slot).getCount();
+        switch (action) {
+            case SHIFT_TAKE -> {
+                if (menu instanceof InventoryMenu) {
+                    store.putInHotbar(store.take(pattern, Math.min(offered, store.hotbarRoom(pattern))));
+                } else {
+                    int available = available(inventory, pattern, offered);
+                    if (available == 0) return;
+                    ItemStack proposal = pattern.copyWithCount(available);
+                    moveToContainer(inventory, menu, proposal);
+                    store.take(pattern, available - proposal.getCount());
                 }
             }
-            if (available == 0) return;
-            ItemStack proposal = pattern.copyWithCount(Math.min(offered, available));
-            int before = proposal.getCount();
-            ((MenuTransfer) chest).bigInventory$moveTo(proposal, 0, chest.getRowCount() * 9, false);
-            store.take(pattern, before - proposal.getCount());
-        } else if (action == Gesture.SHIFT_TAKE) {
-            store.putInHotbar(store.take(pattern, Math.min(offered, store.hotbarRoom(pattern))));
+            case TAKE_HALF -> menu.setCarried(store.take(pattern, (available(inventory, pattern, offered) + 1) / 2));
+            case TAKE -> menu.setCarried(store.take(pattern, offered));
+            default -> throw new IllegalArgumentException("Expected a storage withdrawal");
+        }
+    }
+
+    private static int available(Inventory inventory, ItemStack pattern, int limit) {
+        int count = 0;
+        for (int slot = Backpack.FIRST; slot < inventory.getContainerSize() && count < limit; slot++) {
+            if (Backpack.isStorageSlot(slot) && Backpack.matches(inventory.getItem(slot), pattern)) {
+                count += inventory.getItem(slot).getCount();
+            }
+        }
+        return Math.min(count, limit);
+    }
+
+    private static void moveToContainer(Inventory inventory, AbstractContainerMenu menu, ItemStack proposal) {
+        List<Slot> targets = new ArrayList<>();
+        for (Slot slot : menu.slots) {
+            if (slot.isActive() && MenuPlayerSlots.index(slot, inventory) < 0) targets.add(slot);
+        }
+        // Fill matching stacks first, then use empty slots. Debit only the count the destination accepted.
+        for (Slot slot : targets) {
+            if (proposal.isEmpty()) return;
+            if (Backpack.matches(slot.getItem(), proposal)) insertInto(slot, proposal);
+        }
+        for (Slot slot : targets) {
+            if (proposal.isEmpty()) return;
+            if (!slot.hasItem()) insertInto(slot, proposal);
+        }
+    }
+
+    private static void insertInto(Slot slot, ItemStack proposal) {
+        if (!slot.mayPlace(proposal)) return;
+        ItemStack current = slot.getItem();
+        if (slot instanceof SlotItemHandler wrapped) {
+            int offered = Math.min(proposal.getCount(), slot.getMaxStackSize() - current.getCount());
+            if (offered <= 0) return;
+            ItemStack remainder = wrapped.getItemHandler().insertItem(slot.getSlotIndex(), proposal.copyWithCount(offered), false);
+            proposal.shrink(offered - remainder.getCount());
         } else {
-            if (action == Gesture.TAKE_HALF) {
-                int available = 0;
-                Inventory inv = player.getInventory();
-                for (int slot = Backpack.FIRST; slot < inv.getContainerSize() && available < offered; slot++) {
-                    if (Backpack.isStorageSlot(slot) && Backpack.matches(inv.getItem(slot), pattern)) {
-                        available += inv.getItem(slot).getCount();
-                    }
-                }
-                offered = (Math.min(available, offered) + 1) / 2;
-            }
-            menu.setCarried(store.take(pattern, offered));
+            int moved = Math.min(proposal.getCount(), slot.getMaxStackSize(proposal) - current.getCount());
+            if (moved <= 0) return;
+            ItemStack placed = (current.isEmpty() ? proposal : current).copyWithCount(current.getCount() + moved);
+            slot.setByPlayer(placed);
+            proposal.shrink(moved);
         }
     }
 
     private static boolean validMenu(ServerPlayer player, AbstractContainerMenu menu) {
         if (!player.isAlive() || player.isSpectator() || !menu.stillValid(player)) return false;
         for (Slot slot : menu.slots) {
-            if (slot.container == player.getInventory() && Backpack.isStorageSlot(slot.getSlotIndex())) return true;
+            if (Backpack.isStorageSlot(MenuPlayerSlots.index(slot, player.getInventory()))) return true;
         }
         return false;
     }

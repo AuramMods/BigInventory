@@ -15,7 +15,6 @@ import org.lwjgl.glfw.GLFW;
 import javax.annotation.Nullable;
 
 public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
-    private static final int COLUMNS = 9;
     private static final int ROWS = 3;
     private static final int GRID_TOP = 52;
 
@@ -70,8 +69,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             view = ClientStorage.open(player.inventoryMenu.containerId, menu.getCarried());
             grid = new StorageGrid(view, font, "", StorageGrid.COMPACT_CELL);
         }
-        int gridLeft = (imageWidth - COLUMNS * StorageGrid.COMPACT_CELL - StorageGrid.SCROLLBAR_SPACE) / 2;
-        grid.bounds(leftPos + gridLeft, topPos + GRID_TOP, COLUMNS, ROWS);
+        grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS);
         grid.searchBelowGrid();
         return opened;
     }
