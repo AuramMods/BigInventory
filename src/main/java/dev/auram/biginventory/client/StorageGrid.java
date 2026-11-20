@@ -31,6 +31,7 @@ final class StorageGrid {
     private final int cellSize;
     private final int columns;
     private final int railWidth;
+    private final boolean vanillaSlots;
     private List<Entry> filtered = List.of();
     private String query = "";
     private int displayedChange = -1;
@@ -46,9 +47,14 @@ final class StorageGrid {
     }
 
     StorageGrid(ClientStorage.View view, Font font, String priorSearch, int cellSize) {
+        this(view, font, priorSearch, cellSize, false);
+    }
+
+    StorageGrid(ClientStorage.View view, Font font, String priorSearch, int cellSize, boolean vanillaSlots) {
         this.view = view;
         this.font = font;
         this.cellSize = cellSize;
+        this.vanillaSlots = vanillaSlots;
         columns = (HOTBAR_WIDTH - RAIL_GAP - MIN_RAIL_WIDTH) / cellSize;
         railWidth = HOTBAR_WIDTH - columns * cellSize - RAIL_GAP;
         search = new StorageSearchBox(font);
@@ -79,17 +85,22 @@ final class StorageGrid {
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
         refresh();
         int hovered = indexUnderMouse(mouseX, mouseY);
+        int iconInset = vanillaSlots ? 1 : 0;
         for (int cell = 0; cell < columns * rows; cell++) {
             int index = rowOffset * columns + cell;
             int px = x + cell % columns * cellSize;
             int py = y + cell / columns * cellSize;
-            InventorySkin.well(graphics, px, py, cellSize - 1, cellSize - 1,
-                    index == hovered ? 0xffb1b1b1 : 0xff929292);
+            if (vanillaSlots) {
+                InventorySkin.vanillaSlot(graphics, px, py, cellSize, index == hovered);
+            } else {
+                InventorySkin.well(graphics, px, py, cellSize - 1, cellSize - 1,
+                        index == hovered ? 0xffb1b1b1 : 0xff929292);
+            }
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
             float scale = cellSize == COMPACT_CELL ? 0.75f : 1.0f;
             graphics.pose().pushPose();
-            graphics.pose().translate(px, py, 0);
+            graphics.pose().translate(px + iconInset, py + iconInset, 0);
             graphics.pose().scale(scale, scale, 1);
             graphics.renderItem(entry.icon(), 0, 0);
             graphics.renderItemDecorations(font, entry.icon(), 0, 0, "");
@@ -97,7 +108,7 @@ final class StorageGrid {
             if (entry.count() > 1) renderCount(graphics, entry.count(), px, py);
         }
         int railX = railX();
-        int length = rows * cellSize - 1;
+        int length = gridHeight();
         InventorySkin.well(graphics, railX, y, railWidth, length, 0xff858585);
         int thumb = thumbHeight();
         int offset = maxRow() == 0 ? 0 : (length - thumb) * rowOffset / maxRow();
@@ -121,7 +132,7 @@ final class StorageGrid {
         refresh();
         if (mouseX >= railX()) {
             if (button == 0 && maxRow() > 0) {
-                int length = rows * cellSize - 1;
+                int length = gridHeight();
                 int height = thumbHeight();
                 int top = y + (length - height) * rowOffset / maxRow();
                 thumbGrab = mouseY >= top && mouseY < top + height ? (int) mouseY - top : height / 2;
@@ -148,7 +159,7 @@ final class StorageGrid {
 
     boolean drag(double mouseY) {
         if (!dragging) return false;
-        int travel = rows * cellSize - 1 - thumbHeight();
+        int travel = gridHeight() - thumbHeight();
         rowOffset = travel <= 0 ? 0 : Mth.clamp((int) Math.round((mouseY - y - thumbGrab) * maxRow() / travel), 0, maxRow());
         return true;
     }
@@ -180,12 +191,14 @@ final class StorageGrid {
 
     private int railX() { return x + columns * cellSize + RAIL_GAP; }
 
+    private int gridHeight() { return rows * cellSize - (vanillaSlots ? 0 : 1); }
+
     private int totalRows() { return (filtered.size() + columns - 1) / columns; }
 
     private int maxRow() { return Math.max(0, totalRows() - rows); }
 
     private int thumbHeight() {
-        int length = rows * cellSize - 1;
+        int length = gridHeight();
         return Math.max(7, length * rows / Math.max(rows, totalRows()));
     }
 

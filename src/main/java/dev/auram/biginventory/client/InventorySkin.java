@@ -24,11 +24,23 @@ final class InventorySkin {
         graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, color);
     }
 
-    static void craftingArrow(GuiGraphics graphics, int x, int y) {
+    static void vanillaSlot(GuiGraphics graphics, int x, int y, int size, boolean hovered) {
+        int darkEdge = 0xff373737;
+        int lightEdge = 0xffffffff;
+        int right = x + size - 1;
+        int bottom = y + size - 1;
+        graphics.fill(x, y, right + 1, bottom + 1, hovered ? 0xffb1b1b1 : 0xff8b8b8b);
+        graphics.hLine(x, right - 1, y, darkEdge);
+        graphics.vLine(x, y, bottom, darkEdge);
+        graphics.hLine(x + 1, right - 1, bottom, lightEdge);
+        graphics.vLine(right, y, bottom, lightEdge);
+    }
+
+    static void craftingArrow(GuiGraphics graphics, int x, int headX, int y) {
         int color = 0xff7a7a7a;
-        graphics.fill(x, y - 2, x + 8, y + 3, color);
+        graphics.fill(x, y - 2, headX + 1, y + 3, color);
         for (int i = 0; i < 6; i++) {
-            graphics.fill(x + 7 + i, y - 5 + i, x + 8 + i, y + 6 - i, color);
+            graphics.fill(headX + i, y - 5 + i, headX + i + 1, y + 6 - i, color);
         }
     }
 

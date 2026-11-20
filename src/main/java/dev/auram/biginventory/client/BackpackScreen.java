@@ -4,12 +4,17 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
     private static final int HEADER = 86;
     private static final int FOOTER = 26 + StorageGrid.SEARCH_HEIGHT + 3;
+    private static final int PREVIEW_LEFT = 25;
+    private static final int PREVIEW_TOP = 7;
+    private static final int PREVIEW_WIDTH = 52;
+    private static final int PREVIEW_HEIGHT = 72;
     private final Player player;
     private ClientStorage.View view;
     private PlayerSlots playerSlots;
@@ -40,10 +45,19 @@ final class BackpackScreen extends InventoryScreen {
         }
         boolean opening = view == null;
         if (opening) view = ClientStorage.open(menu.containerId);
-        if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
+        if (playerSlots == null) {
+            playerSlots = new PlayerSlots(menu, player.getInventory());
+            int craftingX = PREVIEW_LEFT + PREVIEW_WIDTH + 2;
+            int offset = craftingX - menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x;
+            for (int index = InventoryMenu.CRAFT_SLOT_START; index < InventoryMenu.CRAFT_SLOT_END; index++) {
+                playerSlots.shiftX(menu.getSlot(index), offset);
+            }
+            playerSlots.shiftX(menu.getSlot(InventoryMenu.SHIELD_SLOT), 2);
+        }
+        titleLabelX = menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x - 1;
         playerSlots.arrange(0, imageHeight - 22);
         String query = search == null ? "" : search.getValue();
-        grid = new StorageGrid(view, font, query, StorageGrid.COMPACT_CELL);
+        grid = new StorageGrid(view, font, query, StorageGrid.COMPACT_CELL, true);
         search = addRenderableWidget(grid.search());
         layoutControls();
         if (opening && search.visible) setInitialFocus(search);
@@ -55,7 +69,10 @@ final class BackpackScreen extends InventoryScreen {
 
     private void layoutControls() {
         if (grid == null) return;
-        if (recipeButton != null) recipeButton.setPosition(leftPos + 104, topPos + 61);
+        if (recipeButton != null) {
+            Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
+            recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);
+        }
         grid.bounds(leftPos + 7, topPos + HEADER, rows);
         grid.searchBelowGrid();
         search.visible = showGrid();
@@ -66,16 +83,21 @@ final class BackpackScreen extends InventoryScreen {
     protected void renderBg(GuiGraphics graphics, float time, int mouseX, int mouseY) {
         layoutControls();
         InventorySkin.panel(graphics, leftPos, topPos, imageWidth, imageHeight);
-        InventorySkin.well(graphics, leftPos + 25, topPos + 6, 52, 72, 0xff202020);
-        InventorySkin.craftingArrow(graphics, leftPos + 135, topPos + 36);
-        Slot result = menu.getSlot(0);
+        InventorySkin.well(graphics, leftPos + PREVIEW_LEFT, topPos + PREVIEW_TOP, PREVIEW_WIDTH, PREVIEW_HEIGHT, 0xff202020);
+        Slot result = menu.getSlot(InventoryMenu.RESULT_SLOT);
+        Slot lastInputInRow = menu.getSlot(InventoryMenu.CRAFT_SLOT_START + menu.getGridWidth() - 1);
+        // JEI's vanilla inventory hotspot lines up with the tip of the arrow.
+        InventorySkin.craftingArrow(graphics, leftPos + lastInputInRow.x + 23,
+                leftPos + result.x - 12, topPos + result.y + 8);
         InventorySkin.well(graphics, leftPos + result.x - 4, topPos + result.y - 4, 24, 24, 0xff8c8c8c);
         for (int index = 1; index < menu.slots.size(); index++) {
             Slot slot = menu.getSlot(index);
             if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);
         }
-        InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 51, topPos + 75, 30,
-                leftPos + 51 - mouseX, topPos + 25 - mouseY, player);
+        int previewX = leftPos + PREVIEW_LEFT + PREVIEW_WIDTH / 2;
+        int previewY = topPos + PREVIEW_TOP + PREVIEW_HEIGHT - 3;
+        InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, previewX, previewY, 30,
+                previewX - mouseX, previewY - 50 - mouseY, player);
         if (showGrid()) grid.render(graphics, mouseX, mouseY);
     }
 

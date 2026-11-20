@@ -29,10 +29,16 @@ final class PlayerSlots {
             if (Inventory.isHotbarSlot(pos.index())) {
                 access.bigInventory$setX(pos.x() + hotbarOffsetX);
                 access.bigInventory$setY(hotbarY);
-            } else {
+            } else if (Backpack.isStorageSlot(pos.index())) {
                 access.bigInventory$setX(-30000);
             }
         }
+    }
+
+    void shiftX(Slot slot, int offset) {
+        // Header slots move independently of the hotbar and storage grid.
+        slots.add(new Position(slot, -1, slot.x, slot.y));
+        ((SlotPosition) slot).bigInventory$setX(slot.x + offset);
     }
 
     void hideBackpack() {
