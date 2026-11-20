@@ -41,7 +41,8 @@ public final class ContainerBackpack {
         int x = legacy[0].x;
         int y = legacy[0].y;
         for (int i = 0; i < legacy.length; i++) {
-            if (legacy[i] == null || legacy[i].x != x + (i % 9) * 18 || legacy[i].y != y + (i / 9) * 18) return;
+            if (legacy[i] == null || legacy[i].x != x + (i % StorageGrid.COLUMNS) * StorageGrid.CELL
+                    || legacy[i].y != y + (i / StorageGrid.COLUMNS) * StorageGrid.CELL) return;
         }
 
         ClientStorage.View view = ClientStorage.open(screen.getMenu());
@@ -58,9 +59,6 @@ public final class ContainerBackpack {
         if (active == null || active.screen() != event.getContainerScreen()) return;
         active.layout();
         if (active.visible()) {
-            int x = active.screen().getGuiLeft() + active.slotX() - 1;
-            int y = active.screen().getGuiTop() + active.slotY();
-            InventorySkin.fill(event.getGuiGraphics(), x, y - 1, StorageGrid.HOTBAR_WIDTH, 54, InventorySkin.Tone.PANEL);
             active.grid().render(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
         }
     }
@@ -126,7 +124,7 @@ public final class ContainerBackpack {
 
         void layout() {
             int x = screen.getGuiLeft() + slotX - 1;
-            int y = screen.getGuiTop() + slotY;
+            int y = screen.getGuiTop() + slotY - 1;
             grid.bounds(x, y, 3);
             int searchY = screen.getGuiTop() - StorageGrid.SEARCH_HEIGHT - 4;
             if (searchY < 0) searchY = screen.getGuiTop() + screen.getYSize() + 4;

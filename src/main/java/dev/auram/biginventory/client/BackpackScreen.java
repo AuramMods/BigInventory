@@ -3,17 +3,20 @@ package dev.auram.biginventory.client;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
+    private static final int PANEL_WIDTH = 188;
+    private static final int MAX_ROWS = 5;
     private static final int STORAGE_TOP = 86 + StorageGrid.SEARCH_HEIGHT + 4;
     private static final int FOOTER = 25;
     private static final int PREVIEW_LEFT = 25;
     private static final int PREVIEW_TOP = 7;
-    private static final int PREVIEW_WIDTH = 52;
+    private static final int PREVIEW_WIDTH = 50;
     private static final int PREVIEW_HEIGHT = 72;
     private final Player player;
     private ClientStorage.View view;
@@ -31,8 +34,9 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     protected void init() {
-        rows = Math.max(1, (height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.COMPACT_CELL);
-        imageHeight = STORAGE_TOP + rows * StorageGrid.COMPACT_CELL + FOOTER;
+        imageWidth = PANEL_WIDTH;
+        rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, MAX_ROWS);
+        imageHeight = STORAGE_TOP + rows * StorageGrid.CELL + FOOTER;
         recipeButton = null;
         super.init();
         if (minecraft.gameMode.hasInfiniteItems()) return;
@@ -45,19 +49,12 @@ final class BackpackScreen extends InventoryScreen {
         }
         boolean opening = view == null;
         if (opening) view = ClientStorage.open(menu);
-        if (playerSlots == null) {
-            playerSlots = new PlayerSlots(menu, player.getInventory());
-            int craftingX = PREVIEW_LEFT + PREVIEW_WIDTH + 2;
-            int offset = craftingX - menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x;
-            for (int index = InventoryMenu.CRAFT_SLOT_START; index < InventoryMenu.CRAFT_SLOT_END; index++) {
-                playerSlots.shiftX(menu.getSlot(index), offset);
-            }
-            playerSlots.shiftX(menu.getSlot(InventoryMenu.SHIELD_SLOT), 2);
-        }
+        if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
         titleLabelX = menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x - 1;
-        playerSlots.arrange(0, imageHeight - 22);
+        int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
+        playerSlots.arrange(gridLeft - 7, imageHeight - 22);
         String query = search == null ? "" : search.getValue();
-        grid = new StorageGrid(view, font, query, StorageGrid.COMPACT_CELL, true);
+        grid = new StorageGrid(view, font, query);
         search = addRenderableWidget(grid.search());
         layoutControls();
         if (opening && search.visible) setInitialFocus(search);
@@ -73,7 +70,7 @@ final class BackpackScreen extends InventoryScreen {
             Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
             recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);
         }
-        grid.bounds(leftPos + 7, topPos + STORAGE_TOP, rows);
+        grid.bounds(leftPos + (imageWidth - StorageGrid.WIDTH) / 2, topPos + STORAGE_TOP, rows);
         search.visible = showGrid();
         if (!search.visible) {
             grid.cancelAnimation();
@@ -90,7 +87,7 @@ final class BackpackScreen extends InventoryScreen {
         Slot result = menu.getSlot(InventoryMenu.RESULT_SLOT);
         Slot lastInputInRow = menu.getSlot(InventoryMenu.CRAFT_SLOT_START + menu.getGridWidth() - 1);
         // JEI's vanilla inventory hotspot lines up with the tip of the arrow.
-        InventorySkin.craftingArrow(graphics, leftPos + lastInputInRow.x + 23,
+        InventorySkin.craftingArrow(graphics, leftPos + lastInputInRow.x + 21,
                 leftPos + result.x - 12, topPos + result.y + 8);
         InventorySkin.well(graphics, leftPos + result.x - 4, topPos + result.y - 4, 24, 24, InventorySkin.Tone.SLOT);
         for (int index = 1; index < menu.slots.size(); index++) {

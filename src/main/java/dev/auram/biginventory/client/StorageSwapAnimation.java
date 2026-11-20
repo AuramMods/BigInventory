@@ -84,14 +84,12 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
             if (flight.slot() != null && !ItemStack.matches(flight.arrival(), view.renderedSlot(flight.slot()))) continue;
             if (flight.to() == null && !ItemStack.matches(flight.arrival(), view.renderedCarried())) continue;
             Point from = flight.from();
-            Point to = flight.to() == null ? new Point(mouseX, mouseY, 1.0f) : flight.to();
+            Point to = flight.to() == null ? new Point(mouseX, mouseY) : flight.to();
             float x = Mth.lerp(progress, from.x(), to.x()) - screen.getGuiLeft();
             float y = Mth.lerp(progress, from.y(), to.y()) - screen.getGuiTop();
-            float scale = Mth.lerp(Mth.clamp(progress, 0, 1), from.scale(), to.scale());
             graphics.pose().pushPose();
             try {
                 graphics.pose().translate(x, y, 250);
-                graphics.pose().scale(scale, scale, 1);
                 graphics.renderItem(flight.icon(), -8, -8);
             } finally {
                 graphics.pose().popPose();
@@ -113,7 +111,7 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
         int x = screen.getGuiLeft() + slot.x + 8;
         int y = screen.getGuiTop() + slot.y + 8;
         return slot.isActive() && x >= 0 && x < screen.width && y >= 0 && y < screen.height
-                ? new Point(x, y, 1.0f) : null;
+                ? new Point(x, y) : null;
     }
 
     private static Point cursorPosition() {
@@ -121,10 +119,10 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
         var window = minecraft.getWindow();
         float x = (float) (minecraft.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth());
         float y = (float) (minecraft.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight());
-        return new Point(x, y, 1.0f);
+        return new Point(x, y);
     }
 
-    record Point(float x, float y, float scale) {}
+    record Point(float x, float y) {}
 
     private record Flight(ItemStack icon, Point from, @Nullable Point to, @Nullable Slot slot,
                           @Nullable ItemStack arrival, ItemStack previous) {}

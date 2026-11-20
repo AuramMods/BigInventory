@@ -20,20 +20,15 @@ import java.util.List;
 import java.util.Locale;
 
 final class StorageGrid {
-    static final int CELL = 17;
-    static final int COMPACT_CELL = 14;
+    static final int CELL = 18;
+    static final int COLUMNS = Inventory.getSelectionSize();
+    static final int WIDTH = COLUMNS * CELL;
     static final int SEARCH_HEIGHT = StorageSearchBox.HEIGHT;
-    static final int HOTBAR_WIDTH = Inventory.getSelectionSize() * 18;
     private static final int RAIL_GAP = 2;
-    private static final int MIN_RAIL_WIDTH = 6;
-    private static final float COUNT_SCALE = 0.625f;
+    private static final int RAIL_WIDTH = 4;
     private final ClientStorage.View view;
     private final Font font;
     private final StorageSearchBox search;
-    private final int cellSize;
-    private final int columns;
-    private final int railWidth;
-    private final boolean vanillaSlots;
     private List<Entry> filtered = List.of();
     private String query = "";
     private int displayedChange = -1;
@@ -46,26 +41,15 @@ final class StorageGrid {
     private StorageSwapAnimation animation;
 
     StorageGrid(ClientStorage.View view, Font font, String priorSearch) {
-        this(view, font, priorSearch, CELL);
-    }
-
-    StorageGrid(ClientStorage.View view, Font font, String priorSearch, int cellSize) {
-        this(view, font, priorSearch, cellSize, false);
-    }
-
-    StorageGrid(ClientStorage.View view, Font font, String priorSearch, int cellSize, boolean vanillaSlots) {
         this.view = view;
         this.font = font;
-        this.cellSize = cellSize;
-        this.vanillaSlots = vanillaSlots;
-        columns = (HOTBAR_WIDTH - RAIL_GAP - MIN_RAIL_WIDTH) / cellSize;
-        railWidth = HOTBAR_WIDTH - columns * cellSize - RAIL_GAP;
         search = new StorageSearchBox(font);
-        search.setWidth(HOTBAR_WIDTH);
+        search.setWidth(WIDTH);
         search.setMaxLength(96);
         search.setValue(priorSearch);
         search.setResponder(text -> {
             cancelAnimation();
+            dragging = false;
             query = text.toLowerCase(Locale.ROOT).strip();
             displayedChange = -1;
             rowOffset = 0;
@@ -77,7 +61,10 @@ final class StorageGrid {
     StorageSearchBox search() { return search; }
 
     void bounds(int x, int y, int rows) {
-        if (this.x != x || this.y != y || this.rows != rows) cancelAnimation();
+        if (this.x != x || this.y != y || this.rows != rows) {
+            cancelAnimation();
+            dragging = false;
+        }
         this.x = x;
         this.y = y;
         this.rows = rows;
@@ -87,31 +74,23 @@ final class StorageGrid {
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
         refresh();
         int hovered = indexUnderMouse(mouseX, mouseY);
-        int iconInset = vanillaSlots ? 1 : 0;
         StorageSwapAnimation swap = animation();
-        for (int cell = 0; cell < columns * rows; cell++) {
-            int index = rowOffset * columns + cell;
-            int px = x + cell % columns * cellSize;
-            int py = y + cell / columns * cellSize;
-            InventorySkin.storageSlot(graphics, px, py, cellSize, vanillaSlots, index == hovered);
+        for (int cell = 0; cell < COLUMNS * rows; cell++) {
+            int index = rowOffset * COLUMNS + cell;
+            int px = x + cell % COLUMNS * CELL;
+            int py = y + cell / COLUMNS * CELL;
+            InventorySkin.slot(graphics, px, py, index == hovered);
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
             if (swap != null && swap.hides(entry)) continue;
-            graphics.pose().pushPose();
-            graphics.pose().translate(px + iconInset, py + iconInset, 0);
-            graphics.pose().scale(iconScale(), iconScale(), 1);
-            graphics.renderItem(entry.icon(), 0, 0);
-            graphics.renderItemDecorations(font, entry.icon(), 0, 0, "");
-            graphics.pose().popPose();
+            graphics.renderItem(entry.icon(), px + 1, py + 1);
+            graphics.renderItemDecorations(font, entry.icon(), px + 1, py + 1, "");
             if (entry.count() > 1) renderCount(graphics, entry.count(), px, py);
         }
-        int railX = railX();
-        int length = gridHeight();
-        InventorySkin.well(graphics, railX, y, railWidth, length, InventorySkin.Tone.RAIL);
-        int thumb = thumbHeight();
-        int offset = maxRow() == 0 ? 0 : (length - thumb) * rowOffset / maxRow();
         if (maxRow() > 0) {
-            InventorySkin.fill(graphics, railX + 1, y + offset, railWidth - 2, thumb, InventorySkin.Tone.THUMB);
+            int thumb = thumbHeight();
+            InventorySkin.scrollbar(graphics, railX(), y, RAIL_WIDTH, gridHeight(), thumbTop(thumb), thumb,
+                    dragging || overRail(mouseX, mouseY));
         }
     }
 
@@ -126,37 +105,37 @@ final class StorageGrid {
     }
 
     boolean click(double mouseX, double mouseY, int button) {
-        if (!inside(mouseX, mouseY) || button > 1) return false;
+        if (button > 1) return false;
         refresh();
-        if (mouseX >= railX()) {
-            if (button == 0 && maxRow() > 0) {
-                int length = gridHeight();
-                int height = thumbHeight();
-                int top = y + (length - height) * rowOffset / maxRow();
-                thumbGrab = mouseY >= top && mouseY < top + height ? (int) mouseY - top : height / 2;
-                dragging = true;
-                drag(mouseY);
-            }
-        } else if (!view.menu.getCarried().isEmpty()) {
+        if (overRail(mouseX, mouseY)) {
+            if (button != 0) return false;
+            int thumb = thumbHeight();
+            int top = thumbTop(thumb);
+            thumbGrab = mouseY >= top && mouseY < top + thumb ? (int) mouseY - top : thumb / 2;
+            dragging = true;
+            return drag(mouseY);
+        }
+        int index = indexUnderMouse(mouseX, mouseY);
+        if (index < 0) return false;
+        if (!view.menu.getCarried().isEmpty()) {
             view.act(-1, button == 0 ? Gesture.DEPOSIT : Gesture.DEPOSIT_ONE);
-        } else {
-            int index = indexUnderMouse(mouseX, mouseY);
-            if (index >= 0 && index < filtered.size()) {
-                view.act(filtered.get(index).id(), Screen.hasShiftDown() ? Gesture.SHIFT_TAKE
-                        : button == 0 ? Gesture.TAKE : Gesture.TAKE_HALF);
-            }
+        } else if (index < filtered.size()) {
+            view.act(filtered.get(index).id(), Screen.hasShiftDown() ? Gesture.SHIFT_TAKE
+                    : button == 0 ? Gesture.TAKE : Gesture.TAKE_HALF);
         }
         return true;
     }
 
     boolean scroll(double mouseX, double mouseY, double delta) {
-        if (!inside(mouseX, mouseY) || delta == 0) return false;
+        refresh();
+        if (delta == 0 || maxRow() == 0 || !(inside(mouseX, mouseY) || overRail(mouseX, mouseY))) return false;
         cancelAnimation();
         rowOffset = Mth.clamp(rowOffset + (delta < 0 ? 1 : -1), 0, maxRow());
         return true;
     }
 
     boolean drag(double mouseY) {
+        refresh();
         if (!dragging) return false;
         cancelAnimation();
         int travel = gridHeight() - thumbHeight();
@@ -175,7 +154,9 @@ final class StorageGrid {
             displayedChange = view.changes;
             filtered = filter(view.displayedEntries());
         }
-        rowOffset = Mth.clamp(rowOffset, 0, maxRow());
+        int last = maxRow();
+        rowOffset = Mth.clamp(rowOffset, 0, last);
+        if (last == 0) dragging = false;
     }
 
     private List<Entry> filter(List<Entry> entries) {
@@ -203,13 +184,11 @@ final class StorageGrid {
     @Nullable
     private Point position(Entry entry, List<Entry> entries) {
         List<Entry> visible = filter(entries);
-        int first = Math.min(rowOffset, maxRow(visible.size())) * columns;
+        int first = Math.min(rowOffset, maxRow(visible.size())) * COLUMNS;
         int cell = visible.indexOf(entry) - first;
-        if (cell < 0 || cell >= columns * rows) return null;
-        float scale = iconScale();
-        float center = (vanillaSlots ? 1 : 0) + 8 * scale;
-        return new Point(x + cell % columns * cellSize + center,
-                y + cell / columns * cellSize + center, scale);
+        if (cell < 0 || cell >= COLUMNS * rows) return null;
+        return new Point(x + cell % COLUMNS * CELL + CELL / 2,
+                y + cell / COLUMNS * CELL + CELL / 2);
     }
 
     @Nullable StorageSwapAnimation animation() {
@@ -221,24 +200,25 @@ final class StorageGrid {
         animation = null;
     }
 
-    private float iconScale() {
-        return cellSize == COMPACT_CELL ? 0.75f : 1.0f;
-    }
-
     private int indexUnderMouse(double mx, double my) {
-        if (mx < x || my < y || mx >= x + columns * cellSize || my >= y + rows * cellSize) return -1;
-        return (rowOffset + (int) (my - y) / cellSize) * columns + (int) (mx - x) / cellSize;
+        if (!inside(mx, my)) return -1;
+        return (rowOffset + (int) (my - y) / CELL) * COLUMNS + (int) (mx - x) / CELL;
     }
 
     private boolean inside(double mx, double my) {
-        return mx >= x && mx < x + HOTBAR_WIDTH && my >= y && my < y + rows * cellSize;
+        return mx >= x && mx < x + WIDTH && my >= y && my < y + gridHeight();
     }
 
-    private int railX() { return x + columns * cellSize + RAIL_GAP; }
+    private int railX() { return x + WIDTH + RAIL_GAP; }
 
-    private int gridHeight() { return rows * cellSize - (vanillaSlots ? 0 : 1); }
+    private boolean overRail(double mx, double my) {
+        return maxRow() > 0 && mx >= railX() && mx < railX() + RAIL_WIDTH
+                && my >= y && my < y + gridHeight();
+    }
 
-    private int rowCount(int entryCount) { return (entryCount + columns - 1) / columns; }
+    private int gridHeight() { return rows * CELL; }
+
+    private int rowCount(int entryCount) { return (entryCount + COLUMNS - 1) / COLUMNS; }
 
     private int maxRow() { return maxRow(filtered.size()); }
 
@@ -249,12 +229,16 @@ final class StorageGrid {
         return Math.max(7, length * rows / Math.max(rows, rowCount(filtered.size())));
     }
 
+    private int thumbTop(int thumb) {
+        return y + (gridHeight() - thumb) * rowOffset / maxRow();
+    }
+
     private void renderCount(GuiGraphics graphics, long count, int x, int y) {
         String label = ItemCount.format(count);
         int width = font.width(label);
-        float scale = Math.min(COUNT_SCALE, (cellSize - 2) / (float) width);
+        float scale = Math.min(1.0f, (CELL - 2) / (float) width);
         graphics.pose().pushPose();
-        graphics.pose().translate(x + cellSize - 2, y + cellSize - 1, 200);
+        graphics.pose().translate(x + CELL - 1, y + CELL - 1, 200);
         graphics.pose().scale(scale, scale, 1);
         graphics.drawString(font, label, -width, -font.lineHeight, 0xffffffff, true);
         graphics.pose().popPose();

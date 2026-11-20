@@ -35,12 +35,6 @@ final class PlayerSlots {
         }
     }
 
-    void shiftX(Slot slot, int offset) {
-        // Header slots move independently of the hotbar and storage grid.
-        slots.add(new Position(slot, -1, slot.x, slot.y));
-        ((SlotPosition) slot).bigInventory$setX(slot.x + offset);
-    }
-
     void hideBackpack() {
         for (Position pos : slots) {
             if (Backpack.isStorageSlot(pos.index())) {

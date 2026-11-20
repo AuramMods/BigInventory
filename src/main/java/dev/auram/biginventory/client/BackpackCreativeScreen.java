@@ -1,6 +1,7 @@
 package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.StorageNetwork.Gesture;
+import dev.auram.biginventory.mixin.SlotPosition;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -17,8 +18,11 @@ import javax.annotation.Nullable;
 public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     private static final int ROWS = 3;
     private static final int GRID_TOP = 50 + StorageGrid.SEARCH_HEIGHT + 4;
+    private static final int HOTBAR_TOP = GRID_TOP + ROWS * StorageGrid.CELL + 4;
+    private static final int INVENTORY_HEIGHT = HOTBAR_TOP + 22;
 
     private final Player player;
+    private final int pickerHeight;
     private ClientStorage.View view;
     private StorageGrid grid;
     private StorageSearchBox search;
@@ -28,6 +32,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     BackpackCreativeScreen(Player player, FeatureFlagSet features, boolean showOperatorTab) {
         super(player, features, showOperatorTab);
         this.player = player;
+        pickerHeight = imageHeight;
     }
 
     public boolean isStorageOpen() {
@@ -36,6 +41,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
 
     @Override
     protected void init() {
+        imageHeight = pickerHeight;
         super.init();
         if (isStorageOpen()) addRenderableWidget(search);
         syncInventoryTab();
@@ -52,7 +58,10 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
 
     /** The native picker builds fresh wrapper slots each time the player tab is selected. */
     private void syncInventoryTab() {
-        if (!isInventoryOpen()) {
+        boolean inventoryOpen = isInventoryOpen();
+        imageHeight = inventoryOpen ? INVENTORY_HEIGHT : pickerHeight;
+        topPos = (height - imageHeight) / 2;
+        if (!inventoryOpen) {
             if (view != null) {
                 closeStorage();
                 if (player.containerMenu == player.inventoryMenu) player.containerMenu = menu;
@@ -61,14 +70,15 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         }
         if (firstSlot != menu.slots.get(0)) {
             firstSlot = menu.slots.get(0);
-            new PlayerSlots(menu, player.getInventory()).hideBackpack();
+            new PlayerSlots(menu, player.getInventory()).arrange(0, HOTBAR_TOP);
+            ((SlotPosition) trashSlot()).bigInventory$setY(HOTBAR_TOP);
         }
         boolean opened = view == null;
         if (opened) {
             // The picker still renders its native slots and tabs. Inventory clicks use menu zero.
             player.containerMenu = player.inventoryMenu;
             view = ClientStorage.open(player.inventoryMenu, menu.getCarried());
-            grid = new StorageGrid(view, font, "", StorageGrid.COMPACT_CELL);
+            grid = new StorageGrid(view, font, "");
             search = addRenderableWidget(grid.search());
         }
         grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS);
@@ -111,7 +121,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         for (Slot slot : menu.slots) {
             if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);
         }
-        Slot trash = menu.getSlot(player.inventoryMenu.slots.size());
+        Slot trash = trashSlot();
         InventorySkin.trash(graphics, leftPos + trash.x, topPos + trash.y);
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 88, topPos + 45, 20,
                 leftPos + 88 - mouseX, topPos + 15 - mouseY, player);
@@ -119,6 +129,10 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         for (CreativeModeTab tab : tabs) {
             if (tab.getType() == CreativeModeTab.Type.INVENTORY) renderTabButton(graphics, tab);
         }
+    }
+
+    private Slot trashSlot() {
+        return menu.getSlot(player.inventoryMenu.slots.size());
     }
 
     @Override
