@@ -32,9 +32,9 @@ Use a Java 17 JDK and the included Gradle wrapper. The project targets Minecraft
 ./gradlew runClient
 ```
 
-The importer copies Auram's JEI 15.20.0.129, Jade 11.13.2, Curios 5.14.1+1.20.1, and Patchouli 84.1 from the default macOS PrismLauncher instance. To use another location, pass its mods directory as the argument to the importer. On Windows, you can also place the original jars directly in `dev-mods` and run `gradlew.bat runClient`. The exact artifact names and versions are in [the dev mod list](dev-mods/auram.txt).
+The importer copies the dev mods from the default macOS PrismLauncher instance for Auram. The [shared dev mods](dev-mods/auram.txt) are JEI, Jade, Curios, and Patchouli. The [client-only test mods](dev-mods/client.txt) are Inventory Particles, its dependency MossyLib, and Smooth Swapping. To use another location, pass its mods directory as the argument to the importer. On Windows, you can place the original jars directly in `dev-mods` and run `gradlew.bat runClient`.
 
-ForgeGradle remaps the local copies for the development runtime. The third-party jars stay local. The client uses `run/` for its worlds, config and logs.
+ForgeGradle remaps the local copies for the development runtime. `runClient` adds a reference map to a generated copy of Smooth Swapping so its mixins work with development mappings. The third-party jars stay local. The client uses `run/` for its worlds, config and logs.
 
 ## Run the dedicated server
 

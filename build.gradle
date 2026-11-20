@@ -21,6 +21,13 @@ group = 'dev.auram.biginventory'
 version = mod_version
 base.archivesName = 'biginventory'
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+def auramTestMods = providers.gradleProperty('auramTestMods').getOrElse('true').toBoolean()
+
+configurations {
+    auramClientMods {
+        canBeConsumed = false
+    }
+}
 
 minecraft {
     mappings channel: 'official', version: minecraft_version
@@ -60,9 +67,12 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     compileOnly fg.deobf('top.theillusivec4.curios:curios-forge:5.14.1+1.20.1:api')
-    if (providers.gradleProperty('auramTestMods').getOrElse('true').toBoolean()) {
+    if (auramTestMods) {
         file('dev-mods/auram.txt').readLines().each { coordinate ->
             runtimeOnly fg.deobf("auram.local:${coordinate}")
+        }
+        file('dev-mods/client.txt').readLines().each { coordinate ->
+            auramClientMods fg.deobf("auram.local:${coordinate}")
         }
     }
 }
@@ -77,6 +87,25 @@ tasks.named('jar') {
     finalizedBy 'reobfJar'
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+if (auramTestMods) {
+    def smoothSwapping = configurations.auramClientMods.filter {
+        it.name.startsWith('smoothswapping-0.9.3.2-1.20.1-forge_')
+    }
+    // Smooth Swapping hardcodes SRG selectors. An empty refmap activates Mixin's userdev remapper.
+    def prepareSmoothSwapping = tasks.register('prepareSmoothSwapping', Zip) {
+        archiveFileName = 'smoothswapping-0.9.3.2-dev.jar'
+        destinationDirectory = layout.buildDirectory.dir('dev-mods')
+        from { smoothSwapping.files.collect { zipTree(it) } }
+        from 'dev-mods/smoothswapping-dev.refmap.json'
+        filesMatching('smoothswapping-common.mixins.json') {
+            filter { line -> line.replace('"required":', '"refmap": "smoothswapping-dev.refmap.json", "required":') }
+        }
+    }
+    tasks.withType(JavaExec).matching { it.name == 'runClient' }.configureEach {
+        classpath configurations.auramClientMods.minus(smoothSwapping), prepareSmoothSwapping.flatMap { it.archiveFile }
+    }
+}
 
 // Allow commands such as "stop" from a terminal running the dev server.
 tasks.withType(JavaExec).matching { it.name == 'runServer' }.configureEach {
