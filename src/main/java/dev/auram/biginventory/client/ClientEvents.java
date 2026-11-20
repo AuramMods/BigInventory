@@ -18,6 +18,7 @@ import net.minecraft.world.item.TieredItem;
 import net.minecraft.world.item.TridentItem;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.ContainerScreenEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
@@ -55,6 +56,11 @@ public final class ClientEvents {
     }
 
     @SubscribeEvent
+    public static void renderTransfers(ContainerScreenEvent.Render.Foreground event) {
+        ClientStorage.renderTransfers(event);
+    }
+
+    @SubscribeEvent
     public static void hud(RenderGuiOverlayEvent.Post event) {
         if (!VanillaGuiOverlay.HOTBAR.id().equals(event.getOverlay().id())) return;
         Minecraft minecraft = Minecraft.getInstance();
@@ -66,15 +72,17 @@ public final class ClientEvents {
         boolean offhand = !minecraft.player.getOffhandItem().isEmpty();
         boolean mainRight = minecraft.player.getMainArm() == HumanoidArm.RIGHT;
         int x = Math.max(RING_RADIUS + 1, middle - 104 - (offhand && mainRight ? 28 : 0));
-        double used = status.used() == 0 ? 0 : status.used() / (double) Math.max(1, status.capacity());
+        long denominator = Math.max(1, status.capacity());
+        double used = status.used() / (double) denominator;
         double fill = Math.min(1, used);
+        int storageColor = status.used() > status.capacity() ? 0xffff5555 : 0xffffffff;
         GuiGraphics graphics = event.getGuiGraphics();
         if (fill > 0) {
             for (RingPixel pixel : RING_PIXELS) {
                 if (pixel.turn() < fill) {
                     int px = x + pixel.x();
                     int py = y + pixel.y();
-                    graphics.fill(px, py, px + 1, py + 1, 0xffffffff);
+                    graphics.fill(px, py, px + 1, py + 1, storageColor);
                 }
             }
         }
@@ -84,11 +92,11 @@ public final class ClientEvents {
         graphics.renderItem(CHEST, -8, -8);
         graphics.pose().popPose();
         if (minecraft.player.isCrouching()) {
-            String percent = (int) (fill * 100) + "%";
+            String percent = (long) (status.used() * 100.0 / denominator) + "%";
             graphics.pose().pushPose();
             graphics.pose().translate(x - RING_RADIUS - 3, y, 0);
             graphics.pose().scale(0.75f, 0.75f, 1);
-            graphics.drawString(minecraft.font, percent, -minecraft.font.width(percent), -4, 0xffffffff, true);
+            graphics.drawString(minecraft.font, percent, -minecraft.font.width(percent), -4, storageColor, true);
             graphics.pose().popPose();
         }
 

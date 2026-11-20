@@ -33,8 +33,8 @@ final class BackpackChestScreen extends ContainerScreen {
         playerSlots.arrange(0, imageHeight - 24);
         String query = searchVisible && grid != null ? grid.search().getValue() : "";
         grid = new StorageGrid(view, font, query);
-        grid.bounds(leftPos + 7, topPos + chestBottom + 11, 3);
-        grid.searchBelowGrid();
+        int gridTop = chestBottom + 11 + (searchVisible ? StorageGrid.SEARCH_HEIGHT : 0);
+        grid.bounds(leftPos + 7, topPos + gridTop, 3);
         if (searchVisible) addRenderableWidget(grid.search());
     }
 

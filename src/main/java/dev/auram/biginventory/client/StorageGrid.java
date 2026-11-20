@@ -2,16 +2,19 @@ package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.StorageNetwork.Entry;
 import dev.auram.biginventory.StorageNetwork.Gesture;
+import dev.auram.biginventory.client.StorageSwapAnimation.Point;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -40,6 +43,7 @@ final class StorageGrid {
     private int rowOffset;
     private boolean dragging;
     private int thumbGrab;
+    private StorageSwapAnimation animation;
 
     StorageGrid(ClientStorage.View view, Font font, String priorSearch) {
         this(view, font, priorSearch, CELL);
@@ -61,30 +65,30 @@ final class StorageGrid {
         search.setMaxLength(96);
         search.setValue(priorSearch);
         search.setResponder(text -> {
+            cancelAnimation();
             query = text.toLowerCase(Locale.ROOT).strip();
             displayedChange = -1;
             rowOffset = 0;
         });
         query = priorSearch.toLowerCase(Locale.ROOT).strip();
+        view.grid = this;
     }
 
     StorageSearchBox search() { return search; }
 
     void bounds(int x, int y, int rows) {
+        if (this.x != x || this.y != y || this.rows != rows) cancelAnimation();
         this.x = x;
         this.y = y;
         this.rows = rows;
         search.setPosition(x, y - SEARCH_HEIGHT - 4);
     }
 
-    void searchBelowGrid() {
-        search.setY(y + rows * cellSize + 3);
-    }
-
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
         refresh();
         int hovered = indexUnderMouse(mouseX, mouseY);
         int iconInset = vanillaSlots ? 1 : 0;
+        StorageSwapAnimation swap = animation();
         for (int cell = 0; cell < columns * rows; cell++) {
             int index = rowOffset * columns + cell;
             int px = x + cell % columns * cellSize;
@@ -97,10 +101,10 @@ final class StorageGrid {
             }
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
-            float scale = cellSize == COMPACT_CELL ? 0.75f : 1.0f;
+            if (swap != null && swap.hides(entry)) continue;
             graphics.pose().pushPose();
             graphics.pose().translate(px + iconInset, py + iconInset, 0);
-            graphics.pose().scale(scale, scale, 1);
+            graphics.pose().scale(iconScale(), iconScale(), 1);
             graphics.renderItem(entry.icon(), 0, 0);
             graphics.renderItemDecorations(font, entry.icon(), 0, 0, "");
             graphics.pose().popPose();
@@ -152,12 +156,14 @@ final class StorageGrid {
 
     boolean scroll(double mouseX, double mouseY, double delta) {
         if (!inside(mouseX, mouseY) || delta == 0) return false;
+        cancelAnimation();
         rowOffset = Mth.clamp(rowOffset + (delta < 0 ? 1 : -1), 0, maxRow());
         return true;
     }
 
     boolean drag(double mouseY) {
         if (!dragging) return false;
+        cancelAnimation();
         int travel = gridHeight() - thumbHeight();
         rowOffset = travel <= 0 ? 0 : Mth.clamp((int) Math.round((mouseY - y - thumbGrab) * maxRow() / travel), 0, maxRow());
         return true;
@@ -172,11 +178,56 @@ final class StorageGrid {
     private void refresh() {
         if (displayedChange != view.changes) {
             displayedChange = view.changes;
-            filtered = view.displayedEntries().stream().filter(entry -> query.isEmpty()
-                    || entry.icon().getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
-                    || String.valueOf(ForgeRegistries.ITEMS.getKey(entry.icon().getItem())).contains(query)).toList();
+            filtered = filter(view.displayedEntries());
         }
         rowOffset = Mth.clamp(rowOffset, 0, maxRow());
+    }
+
+    private List<Entry> filter(List<Entry> entries) {
+        if (query.isEmpty()) return entries;
+        return entries.stream().filter(entry -> entry.icon().getHoverName().getString().toLowerCase(Locale.ROOT).contains(query)
+                || String.valueOf(ForgeRegistries.ITEMS.getKey(entry.icon().getItem())).contains(query)).toList();
+    }
+
+    void startAnimation(AbstractContainerScreen<?> screen, StoragePrediction preview) {
+        cancelAnimation();
+        var transfer = preview.transfer();
+        if (transfer == null || rows <= 0) return;
+        var timing = SmoothSwappingCompat.timing();
+        if (timing == null) return;
+        Point storage = position(transfer.entry(), transfer.delta() > 0 ? preview.entries() : view.entries);
+        if (storage != null) animation = StorageSwapAnimation.start(screen, view.menu, preview, storage, timing);
+    }
+
+    void retargetDeposit(Entry entry, List<Entry> entries) {
+        Point destination = position(entry, entries);
+        if (destination == null) cancelAnimation();
+        else animation = animation.retargetDeposit(destination);
+    }
+
+    @Nullable
+    private Point position(Entry entry, List<Entry> entries) {
+        List<Entry> visible = filter(entries);
+        int first = Math.min(rowOffset, maxRow(visible.size())) * columns;
+        int cell = visible.indexOf(entry) - first;
+        if (cell < 0 || cell >= columns * rows) return null;
+        float scale = iconScale();
+        float center = (vanillaSlots ? 1 : 0) + 8 * scale;
+        return new Point(x + cell % columns * cellSize + center,
+                y + cell / columns * cellSize + center, scale);
+    }
+
+    @Nullable StorageSwapAnimation animation() {
+        if (animation != null && !animation.active()) cancelAnimation();
+        return animation;
+    }
+
+    void cancelAnimation() {
+        animation = null;
+    }
+
+    private float iconScale() {
+        return cellSize == COMPACT_CELL ? 0.75f : 1.0f;
     }
 
     private int indexUnderMouse(double mx, double my) {
@@ -192,13 +243,15 @@ final class StorageGrid {
 
     private int gridHeight() { return rows * cellSize - (vanillaSlots ? 0 : 1); }
 
-    private int totalRows() { return (filtered.size() + columns - 1) / columns; }
+    private int rowCount(int entryCount) { return (entryCount + columns - 1) / columns; }
 
-    private int maxRow() { return Math.max(0, totalRows() - rows); }
+    private int maxRow() { return maxRow(filtered.size()); }
+
+    private int maxRow(int entryCount) { return Math.max(0, rowCount(entryCount) - rows); }
 
     private int thumbHeight() {
         int length = gridHeight();
-        return Math.max(7, length * rows / Math.max(rows, totalRows()));
+        return Math.max(7, length * rows / Math.max(rows, rowCount(filtered.size())));
     }
 
     private void renderCount(GuiGraphics graphics, long count, int x, int y) {

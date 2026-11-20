@@ -18,9 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 /** A display-only estimate for a single request. Native slots and the menu cursor are server-controlled. */
-record StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor, Map<Slot, ItemStack> slots) {
+record StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor, Map<Slot, ItemStack> slots,
+                         @Nullable Transfer transfer) {
     StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor) {
-        this(entries, cursor, Map.of());
+        this(entries, cursor, Map.of(), null);
     }
 
     static StoragePrediction preview(List<Entry> entries, Gesture gesture, int index, AbstractContainerMenu menu,
@@ -56,14 +57,14 @@ record StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor, Map<Sl
         if (added == 0) return new StoragePrediction(entries, null);
 
         List<Entry> result = new ArrayList<>(entries);
-        if (index < 0) result.add(new Entry(-1, stack.copyWithCount(1), added, 0L));
-        else {
-            Entry entry = entries.get(index);
-            result.set(index, new Entry(entry.id(), entry.icon(), count + added, entry.overflowCount()));
-        }
+        Entry entry = index < 0 ? new Entry(-1, stack.copyWithCount(1), added, 0L) : entries.get(index);
+        Entry updated = new Entry(entry.id(), entry.icon(), count + added, entry.overflowCount());
+        if (index < 0) result.add(updated);
+        else result.set(index, updated);
         ItemStack remainder = stack.copyWithCount(stack.getCount() - added);
-        return source == null ? new StoragePrediction(List.copyOf(result), remainder)
-                : new StoragePrediction(List.copyOf(result), null, Map.of(source, remainder));
+        Transfer transfer = new Transfer(updated, added);
+        return source == null ? new StoragePrediction(List.copyOf(result), remainder, Map.of(), transfer)
+                : new StoragePrediction(List.copyOf(result), null, Map.of(source, remainder), transfer);
     }
 
     private static StoragePrediction withdraw(List<Entry> entries, Gesture gesture, int index, AbstractContainerMenu menu,
@@ -85,6 +86,11 @@ record StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor, Map<Sl
         if (remaining == 0) result.remove(index);
         else result.set(index, new Entry(entry.id(), entry.icon(), remaining, entry.overflowCount()));
         ItemStack cursor = gesture == Gesture.SHIFT_TAKE ? null : entry.icon().copyWithCount(moved);
-        return new StoragePrediction(List.copyOf(result), cursor, slots);
+        return new StoragePrediction(List.copyOf(result), cursor, slots, new Transfer(entry, -moved));
+    }
+
+    // Deposits refer to the resulting entry. Withdrawals refer to the original entry.
+    record Transfer(Entry entry, int delta) {
+        long expectedCount() { return entry.count() + Math.min(0, delta); }
     }
 }

@@ -131,7 +131,9 @@ public final class ContainerBackpack {
             int searchY = screen.getGuiTop() - StorageGrid.SEARCH_HEIGHT - 4;
             if (searchY < 0) searchY = screen.getGuiTop() + screen.getYSize() + 4;
             grid.search().setPosition(x, searchY);
-            grid.search().visible = visible() && searchY + StorageGrid.SEARCH_HEIGHT <= screen.height;
+            boolean gridVisible = visible();
+            grid.search().visible = gridVisible && searchY + StorageGrid.SEARCH_HEIGHT <= screen.height;
+            if (!gridVisible) grid.cancelAnimation();
             if (!grid.search().visible && screen.getFocused() == grid.search()) screen.setFocused(null);
         }
     }

@@ -16,7 +16,7 @@ import javax.annotation.Nullable;
 
 public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     private static final int ROWS = 3;
-    private static final int GRID_TOP = 52;
+    private static final int GRID_TOP = 50 + StorageGrid.SEARCH_HEIGHT + 4;
 
     private final Player player;
     private ClientStorage.View view;
@@ -72,7 +72,6 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             search = addRenderableWidget(grid.search());
         }
         grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS);
-        grid.searchBelowGrid();
         if (opened) setInitialFocus(search);
     }
 

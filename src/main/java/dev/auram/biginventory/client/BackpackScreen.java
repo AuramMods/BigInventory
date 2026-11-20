@@ -9,8 +9,8 @@ import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
-    private static final int HEADER = 86;
-    private static final int FOOTER = 26 + StorageGrid.SEARCH_HEIGHT + 3;
+    private static final int STORAGE_TOP = 86 + StorageGrid.SEARCH_HEIGHT + 4;
+    private static final int FOOTER = 25;
     private static final int PREVIEW_LEFT = 25;
     private static final int PREVIEW_TOP = 7;
     private static final int PREVIEW_WIDTH = 52;
@@ -31,8 +31,8 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     protected void init() {
-        rows = Math.max(1, (height - 12 - HEADER - FOOTER) / StorageGrid.COMPACT_CELL);
-        imageHeight = HEADER + rows * StorageGrid.COMPACT_CELL + FOOTER;
+        rows = Math.max(1, (height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.COMPACT_CELL);
+        imageHeight = STORAGE_TOP + rows * StorageGrid.COMPACT_CELL + FOOTER;
         recipeButton = null;
         super.init();
         if (minecraft.gameMode.hasInfiniteItems()) return;
@@ -73,10 +73,12 @@ final class BackpackScreen extends InventoryScreen {
             Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
             recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);
         }
-        grid.bounds(leftPos + 7, topPos + HEADER, rows);
-        grid.searchBelowGrid();
+        grid.bounds(leftPos + 7, topPos + STORAGE_TOP, rows);
         search.visible = showGrid();
-        if (!search.visible && getFocused() == search) setFocused(null);
+        if (!search.visible) {
+            grid.cancelAnimation();
+            if (getFocused() == search) setFocused(null);
+        }
     }
 
     @Override
