@@ -14,6 +14,8 @@ final class BackpackScreen extends InventoryScreen {
     private ClientStorage.View view;
     private PlayerSlots playerSlots;
     private StorageGrid grid;
+    // JEI recognizes focused EditBox fields on a screen when routing keyboard input.
+    private StorageSearchBox search;
     private ImageButton recipeButton;
     private int rows;
 
@@ -36,13 +38,15 @@ final class BackpackScreen extends InventoryScreen {
                 break;
             }
         }
-        if (view == null) view = ClientStorage.open(menu.containerId);
+        boolean opening = view == null;
+        if (opening) view = ClientStorage.open(menu.containerId);
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
         playerSlots.arrange(0, imageHeight - 22);
-        String query = grid == null ? "" : grid.search().getValue();
+        String query = search == null ? "" : search.getValue();
         grid = new StorageGrid(view, font, query, StorageGrid.COMPACT_CELL);
-        addRenderableWidget(grid.search());
+        search = addRenderableWidget(grid.search());
         layoutControls();
+        if (opening && search.visible) setInitialFocus(search);
     }
 
     private boolean showGrid() {
@@ -54,8 +58,8 @@ final class BackpackScreen extends InventoryScreen {
         if (recipeButton != null) recipeButton.setPosition(leftPos + 104, topPos + 61);
         grid.bounds(leftPos + 7, topPos + HEADER, rows);
         grid.searchBelowGrid();
-        grid.search().visible = showGrid();
-        if (!showGrid() && getFocused() == grid.search()) setFocused(null);
+        search.visible = showGrid();
+        if (!search.visible && getFocused() == search) setFocused(null);
     }
 
     @Override
@@ -84,7 +88,7 @@ final class BackpackScreen extends InventoryScreen {
     @Override
     public void containerTick() {
         super.containerTick();
-        if (grid != null) grid.search().tick();
+        if (search != null) search.tick();
     }
 
     @Override
@@ -115,8 +119,8 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     public boolean keyPressed(int key, int scanCode, int modifiers) {
-        if (showGrid() && getFocused() == grid.search() && key != GLFW.GLFW_KEY_ESCAPE && key != GLFW.GLFW_KEY_TAB) {
-            grid.search().keyPressed(key, scanCode, modifiers);
+        if (showGrid() && getFocused() == search && key != GLFW.GLFW_KEY_ESCAPE && key != GLFW.GLFW_KEY_TAB) {
+            search.keyPressed(key, scanCode, modifiers);
             return true;
         }
         return super.keyPressed(key, scanCode, modifiers);

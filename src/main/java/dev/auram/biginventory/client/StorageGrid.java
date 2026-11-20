@@ -6,7 +6,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -28,7 +27,7 @@ final class StorageGrid {
     private static final float COUNT_SCALE = 0.625f;
     private final ClientStorage.View view;
     private final Font font;
-    private final EditBox search;
+    private final StorageSearchBox search;
     private final int cellSize;
     private final int columns;
     private final int railWidth;
@@ -64,7 +63,7 @@ final class StorageGrid {
         query = priorSearch.toLowerCase(Locale.ROOT).strip();
     }
 
-    EditBox search() { return search; }
+    StorageSearchBox search() { return search; }
 
     void bounds(int x, int y, int rows) {
         this.x = x;

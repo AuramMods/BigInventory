@@ -21,6 +21,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     private final Player player;
     private ClientStorage.View view;
     private StorageGrid grid;
+    private StorageSearchBox search;
     private Slot firstSlot;
     private boolean gridClick;
 
@@ -36,27 +37,27 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     @Override
     protected void init() {
         super.init();
+        if (isStorageOpen()) addRenderableWidget(search);
         syncInventoryTab();
-        if (grid != null) addRenderableWidget(grid.search());
     }
 
     @Override
     public void containerTick() {
         super.containerTick();
         if (minecraft.screen == this) {
-            if (syncInventoryTab()) addRenderableWidget(grid.search());
-            if (grid != null) grid.search().tick();
+            syncInventoryTab();
+            if (search != null) search.tick();
         }
     }
 
     /** The native picker builds fresh wrapper slots each time the player tab is selected. */
-    private boolean syncInventoryTab() {
+    private void syncInventoryTab() {
         if (!isInventoryOpen()) {
             if (view != null) {
                 closeStorage();
                 if (player.containerMenu == player.inventoryMenu) player.containerMenu = menu;
             }
-            return false;
+            return;
         }
         if (firstSlot != menu.slots.get(0)) {
             firstSlot = menu.slots.get(0);
@@ -68,21 +69,23 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             player.containerMenu = player.inventoryMenu;
             view = ClientStorage.open(player.inventoryMenu.containerId, menu.getCarried());
             grid = new StorageGrid(view, font, "", StorageGrid.COMPACT_CELL);
+            search = addRenderableWidget(grid.search());
         }
         grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS);
         grid.searchBelowGrid();
-        return opened;
+        if (opened) setInitialFocus(search);
     }
 
     private void closeStorage() {
         ClientStorage.close(view);
         if (view != null) player.inventoryMenu.setCarried(ItemStack.EMPTY);
-        if (grid != null) {
-            if (getFocused() == grid.search()) setFocused(null);
-            removeWidget(grid.search());
+        if (search != null) {
+            if (getFocused() == search) setFocused(null);
+            removeWidget(search);
         }
         view = null;
         grid = null;
+        search = null;
         firstSlot = null;
         gridClick = false;
     }
@@ -133,7 +136,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             return true;
         }
         boolean handled = super.mouseClicked(x, y, button);
-        if (syncInventoryTab()) addRenderableWidget(grid.search());
+        syncInventoryTab();
         return handled;
     }
 
@@ -145,7 +148,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             return true;
         }
         boolean handled = super.mouseReleased(x, y, button);
-        if (syncInventoryTab()) addRenderableWidget(grid.search());
+        syncInventoryTab();
         return handled;
     }
 
@@ -161,19 +164,19 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
 
     @Override
     public boolean keyPressed(int key, int scan, int modifiers) {
-        if (isStorageOpen() && getFocused() == grid.search() && key != GLFW.GLFW_KEY_ESCAPE && key != GLFW.GLFW_KEY_TAB) {
-            grid.search().keyPressed(key, scan, modifiers);
+        if (isStorageOpen() && getFocused() == search && key != GLFW.GLFW_KEY_ESCAPE && key != GLFW.GLFW_KEY_TAB) {
+            search.keyPressed(key, scan, modifiers);
             return true;
         }
         boolean handled = super.keyPressed(key, scan, modifiers);
-        if (minecraft.screen == this && syncInventoryTab()) addRenderableWidget(grid.search());
+        if (minecraft.screen == this) syncInventoryTab();
         return handled;
     }
 
     @Override
     public boolean charTyped(char character, int modifiers) {
-        if (isStorageOpen() && getFocused() == grid.search()) {
-            return grid.search().charTyped(character, modifiers);
+        if (isStorageOpen() && getFocused() == search) {
+            return search.charTyped(character, modifiers);
         }
         return super.charTyped(character, modifiers);
     }
