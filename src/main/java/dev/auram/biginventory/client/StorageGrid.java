@@ -4,12 +4,15 @@ import dev.auram.biginventory.StorageNetwork.Entry;
 import dev.auram.biginventory.StorageNetwork.Gesture;
 import dev.auram.biginventory.client.StorageSwapAnimation.Point;
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -26,6 +29,9 @@ final class StorageGrid {
     static final int SEARCH_HEIGHT = StorageSearchBox.HEIGHT;
     private static final int RAIL_GAP = 2;
     private static final int RAIL_WIDTH = 4;
+    // The default creative animation halves the remaining distance every game tick.
+    private static final int SCROLL_HALF_LIFE_MS = 50;
+    private static final int SCROLL_TICK_INTERVAL_MS = 50;
     private final ClientStorage.View view;
     private final Font font;
     private final StorageSearchBox search;
@@ -35,7 +41,10 @@ final class StorageGrid {
     private int x;
     private int y;
     private int rows;
-    private int rowOffset;
+    private double targetRow;
+    private double scrollPosition;
+    private long lastScrollFrame;
+    private long lastScrollTick = Util.getMillis() - SCROLL_TICK_INTERVAL_MS;
     private boolean dragging;
     private int thumbGrab;
     private StorageSwapAnimation animation;
@@ -52,7 +61,8 @@ final class StorageGrid {
             dragging = false;
             query = text.toLowerCase(Locale.ROOT).strip();
             displayedChange = -1;
-            rowOffset = 0;
+            targetRow = 0;
+            scrollPosition = 0;
         });
         query = priorSearch.toLowerCase(Locale.ROOT).strip();
         view.grid = this;
@@ -73,12 +83,30 @@ final class StorageGrid {
 
     void render(GuiGraphics graphics, int mouseX, int mouseY) {
         refresh();
-        int hovered = indexUnderMouse(mouseX, mouseY);
+        updateScroll(Util.getMillis());
+        int scroll = scrollPixels();
+        int firstRow = scroll / CELL;
+        int partialRow = scroll % CELL;
+        if (partialRow != 0) graphics.enableScissor(x, y, x + WIDTH, y + gridHeight());
+        try {
+            renderSlots(graphics, indexUnderMouse(mouseX, mouseY), firstRow, partialRow);
+        } finally {
+            if (partialRow != 0) graphics.disableScissor();
+        }
+        if (maxRow() > 0) {
+            int thumb = thumbHeight();
+            InventorySkin.scrollbar(graphics, railX(), y, RAIL_WIDTH, gridHeight(), thumbTop(thumb), thumb,
+                    dragging || overRail(mouseX, mouseY));
+        }
+    }
+
+    private void renderSlots(GuiGraphics graphics, int hovered, int firstRow, int partialRow) {
         StorageSwapAnimation swap = animation();
-        for (int cell = 0; cell < COLUMNS * rows; cell++) {
-            int index = rowOffset * COLUMNS + cell;
+        int visibleRows = partialRow == 0 ? rows : rows + 1;
+        for (int cell = 0; cell < COLUMNS * visibleRows; cell++) {
+            int index = firstRow * COLUMNS + cell;
             int px = x + cell % COLUMNS * CELL;
-            int py = y + cell / COLUMNS * CELL;
+            int py = y + cell / COLUMNS * CELL - partialRow;
             InventorySkin.slot(graphics, px, py, index == hovered);
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
@@ -86,11 +114,6 @@ final class StorageGrid {
             graphics.renderItem(entry.icon(), px + 1, py + 1);
             graphics.renderItemDecorations(font, entry.icon(), px + 1, py + 1, "");
             if (entry.count() > 1) renderCount(graphics, entry.count(), px, py);
-        }
-        if (maxRow() > 0) {
-            int thumb = thumbHeight();
-            InventorySkin.scrollbar(graphics, railX(), y, RAIL_WIDTH, gridHeight(), thumbTop(thumb), thumb,
-                    dragging || overRail(mouseX, mouseY));
         }
     }
 
@@ -111,8 +134,14 @@ final class StorageGrid {
             if (button != 0) return false;
             int thumb = thumbHeight();
             int top = thumbTop(thumb);
-            thumbGrab = mouseY >= top && mouseY < top + thumb ? (int) mouseY - top : thumb / 2;
             dragging = true;
+            cancelAnimation();
+            if (mouseY >= top && mouseY < top + thumb) {
+                thumbGrab = (int) mouseY - top;
+                targetRow = scrollPosition / CELL;
+                return true;
+            }
+            thumbGrab = thumb / 2;
             return drag(mouseY);
         }
         int index = indexUnderMouse(mouseX, mouseY);
@@ -129,8 +158,15 @@ final class StorageGrid {
     boolean scroll(double mouseX, double mouseY, double delta) {
         refresh();
         if (delta == 0 || maxRow() == 0 || !(inside(mouseX, mouseY) || overRail(mouseX, mouseY))) return false;
-        cancelAnimation();
-        rowOffset = Mth.clamp(rowOffset + (delta < 0 ? 1 : -1), 0, maxRow());
+        if (dragging) return true;
+        long previousRow = Math.round(targetRow);
+        targetRow = Mth.clamp(targetRow - delta, 0.0, maxRow());
+        if (Math.round(targetRow) != previousRow) {
+            cancelAnimation();
+            long now = Util.getMillis();
+            if (scrollPosition == previousRow * CELL) lastScrollFrame = now;
+            playScrollTick(now);
+        }
         return true;
     }
 
@@ -139,14 +175,19 @@ final class StorageGrid {
         if (!dragging) return false;
         cancelAnimation();
         int travel = gridHeight() - thumbHeight();
-        rowOffset = travel <= 0 ? 0 : Mth.clamp((int) Math.round((mouseY - y - thumbGrab) * maxRow() / travel), 0, maxRow());
+        double nextRow = travel <= 0 ? 0 : Mth.clamp((mouseY - y - thumbGrab) * maxRow() / travel, 0.0, maxRow());
+        if (Math.round(nextRow) != Math.round(targetRow)) playScrollTick(Util.getMillis());
+        targetRow = nextRow;
+        scrollPosition = nextRow * CELL;
         return true;
     }
 
     boolean release() {
-        boolean handled = dragging;
+        if (!dragging) return false;
         dragging = false;
-        return handled;
+        targetRow = Math.round(targetRow);
+        lastScrollFrame = Util.getMillis();
+        return true;
     }
 
     private void refresh() {
@@ -155,8 +196,26 @@ final class StorageGrid {
             filtered = filter(view.displayedEntries());
         }
         int last = maxRow();
-        rowOffset = Mth.clamp(rowOffset, 0, last);
+        targetRow = Mth.clamp(targetRow, 0.0, last);
+        scrollPosition = Mth.clamp(scrollPosition, 0.0, last * CELL);
         if (last == 0) dragging = false;
+    }
+
+    private void updateScroll(long now) {
+        double target = Math.round(targetRow) * CELL;
+        if (!dragging && scrollPosition != target) {
+            double elapsed = (now - lastScrollFrame) / (double) SCROLL_HALF_LIFE_MS;
+            double remaining = (scrollPosition - target) * Math.pow(0.5, elapsed);
+            scrollPosition = Math.abs(remaining) < 0.5 ? target : target + remaining;
+        }
+        lastScrollFrame = now;
+    }
+
+    private void playScrollTick(long now) {
+        if (now - lastScrollTick < SCROLL_TICK_INTERVAL_MS) return;
+        lastScrollTick = now;
+        Minecraft.getInstance().getSoundManager()
+                .play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_HAT.value(), 1.8f, 0.2f));
     }
 
     private List<Entry> filter(List<Entry> entries) {
@@ -168,7 +227,7 @@ final class StorageGrid {
     void startAnimation(AbstractContainerScreen<?> screen, StoragePrediction preview) {
         cancelAnimation();
         var transfer = preview.transfer();
-        if (transfer == null || rows <= 0) return;
+        if (transfer == null || rows <= 0 || dragging || scrollPixels() != Math.round(targetRow) * CELL) return;
         var timing = SmoothSwappingCompat.timing();
         if (timing == null) return;
         Point storage = position(transfer.entry(), transfer.delta() > 0 ? preview.entries() : view.entries);
@@ -184,11 +243,12 @@ final class StorageGrid {
     @Nullable
     private Point position(Entry entry, List<Entry> entries) {
         List<Entry> visible = filter(entries);
-        int first = Math.min(rowOffset, maxRow(visible.size())) * COLUMNS;
-        int cell = visible.indexOf(entry) - first;
-        if (cell < 0 || cell >= COLUMNS * rows) return null;
-        return new Point(x + cell % COLUMNS * CELL + CELL / 2,
-                y + cell / COLUMNS * CELL + CELL / 2);
+        int index = visible.indexOf(entry);
+        if (index < 0) return null;
+        int scroll = Math.min(scrollPixels(), maxRow(visible.size()) * CELL);
+        int centerY = y + index / COLUMNS * CELL + CELL / 2 - scroll;
+        if (centerY < y || centerY >= y + gridHeight()) return null;
+        return new Point(x + index % COLUMNS * CELL + CELL / 2, centerY);
     }
 
     @Nullable StorageSwapAnimation animation() {
@@ -202,8 +262,10 @@ final class StorageGrid {
 
     private int indexUnderMouse(double mx, double my) {
         if (!inside(mx, my)) return -1;
-        return (rowOffset + (int) (my - y) / CELL) * COLUMNS + (int) (mx - x) / CELL;
+        return ((int) (my - y) + scrollPixels()) / CELL * COLUMNS + (int) (mx - x) / CELL;
     }
+
+    private int scrollPixels() { return (int) Math.round(scrollPosition); }
 
     private boolean inside(double mx, double my) {
         return mx >= x && mx < x + WIDTH && my >= y && my < y + gridHeight();
@@ -230,7 +292,7 @@ final class StorageGrid {
     }
 
     private int thumbTop(int thumb) {
-        return y + (gridHeight() - thumb) * rowOffset / maxRow();
+        return y + (int) Math.round((gridHeight() - thumb) * scrollPosition / (maxRow() * CELL));
     }
 
     private void renderCount(GuiGraphics graphics, long count, int x, int y) {
