@@ -3,17 +3,18 @@ package dev.auram.biginventory.client;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ChestMenu;
 import org.lwjgl.glfw.GLFW;
 
 final class BackpackChestScreen extends ContainerScreen {
+    private static final int FOOTER = 29;
     private final Inventory inventory;
     private final int chestBottom;
     private ClientStorage.View view;
     private PlayerSlots playerSlots;
     private StorageGrid grid;
-    private boolean searchVisible;
 
     BackpackChestScreen(ChestMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -23,19 +24,18 @@ final class BackpackChestScreen extends ContainerScreen {
 
     @Override
     protected void init() {
-        // Double chests are nearly the full viewport at the largest GUI scale.
-        searchVisible = height >= chestBottom + 109;
-        imageHeight = chestBottom + (searchVisible ? 106 : 96);
+        int gridTop = chestBottom + 11 + StorageGrid.SEARCH_HEIGHT;
+        int rows = Mth.clamp((height - gridTop - FOOTER - 4) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
+        imageHeight = gridTop + rows * StorageGrid.CELL + FOOTER;
         inventoryLabelY = -30000;
         super.init();
         if (view == null) view = ClientStorage.open(menu);
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, inventory);
         playerSlots.arrange(0, imageHeight - 24);
-        String query = searchVisible && grid != null ? grid.search().getValue() : "";
+        String query = grid != null ? grid.search().getValue() : "";
         grid = new StorageGrid(view, font, query);
-        int gridTop = chestBottom + 11 + (searchVisible ? StorageGrid.SEARCH_HEIGHT : 0);
-        grid.bounds(leftPos + 7, topPos + gridTop, 3);
-        if (searchVisible) addRenderableWidget(grid.search());
+        grid.bounds(leftPos + 7, topPos + gridTop, rows);
+        addRenderableWidget(grid.search());
     }
 
     @Override

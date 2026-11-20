@@ -15,7 +15,7 @@ final class InventorySkin {
 
     // Textured controls use the same GUI shader as the inventory frame.
     enum Tone {
-        WELL_EDGE(1), WELL_SHADOW(2), PREVIEW(3), RAIL(4), THUMB(5), SLOT(6), ARROW(7),
+        PANEL(0), WELL_EDGE(1), WELL_SHADOW(2), PREVIEW(3), RAIL(4), THUMB(5), SLOT(6), ARROW(7),
         SEARCH_FOCUSED(8), SEARCH_IDLE(9), SEARCH_FOCUSED_EDGE(10), SEARCH_IDLE_EDGE(11), THUMB_HOVER(12);
 
         private final int u;
@@ -27,6 +27,15 @@ final class InventorySkin {
 
     static void panel(GuiGraphics graphics, int x, int y, int width, int height) {
         graphics.blitNineSliced(FRAME, x, y, width, height, 4, 32, 32, 0, 0);
+    }
+
+    static void extendPanel(GuiGraphics graphics, int left, int bottom, int width, int extension) {
+        graphics.enableScissor(left, bottom - 4, left + width, bottom + extension);
+        try {
+            panel(graphics, left, bottom - 8, width, extension + 8);
+        } finally {
+            graphics.disableScissor();
+        }
     }
 
     static void slot(GuiGraphics graphics, int left, int top, Slot slot) {

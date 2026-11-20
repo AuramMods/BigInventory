@@ -27,6 +27,8 @@ final class StorageGrid {
     static final int COLUMNS = Inventory.getSelectionSize();
     static final int WIDTH = COLUMNS * CELL;
     static final int SEARCH_HEIGHT = StorageSearchBox.HEIGHT;
+    static final int SEARCH_GAP = 4;
+    static final int MAX_ROWS = 5;
     private static final int RAIL_GAP = 2;
     private static final int RAIL_WIDTH = 4;
     // The default creative animation halves the remaining distance every game tick.
@@ -78,7 +80,7 @@ final class StorageGrid {
         this.x = x;
         this.y = y;
         this.rows = rows;
-        search.setPosition(x, y - SEARCH_HEIGHT - 4);
+        search.setPosition(x, y - SEARCH_HEIGHT - SEARCH_GAP);
     }
 
     void render(GuiGraphics graphics, int mouseX, int mouseY) {

@@ -11,7 +11,6 @@ import org.lwjgl.glfw.GLFW;
 
 final class BackpackScreen extends InventoryScreen {
     private static final int PANEL_WIDTH = 188;
-    private static final int MAX_ROWS = 5;
     private static final int STORAGE_TOP = 86 + StorageGrid.SEARCH_HEIGHT + 4;
     private static final int FOOTER = 25;
     private static final int PREVIEW_LEFT = 25;
@@ -35,7 +34,7 @@ final class BackpackScreen extends InventoryScreen {
     @Override
     protected void init() {
         imageWidth = PANEL_WIDTH;
-        rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, MAX_ROWS);
+        rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
         imageHeight = STORAGE_TOP + rows * StorageGrid.CELL + FOOTER;
         recipeButton = null;
         super.init();
