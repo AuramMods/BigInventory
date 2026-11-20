@@ -1,0 +1,29 @@
+{
+  "name": "Storage Controls",
+  "category": "biginventory:inventory",
+  "icon": "minecraft:compass",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Open your inventory to see your backpack above the nine hotbar slots. Matching items share a grid entry with their total quantity. The grid is a list of items you can search and scroll through.$(br2)The hotbar, armor, offhand, equipped Curios, and crafting grid have their own space."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Find Items",
+      "text": "Start typing when the inventory opens, or click $(thing)Search$() to focus it. You can search by display name or registry ID, such as $(item)minecraft:oak_log$(). Scroll or drag the scrollbar to reach more entries. At smaller GUI scales, more rows can fit on screen."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Take and Deposit",
+      "text": "$(li)$(thing)Left-click$() an entry to take up to one stack.$(li)$(thing)Right-click$() an entry to take half of that amount, rounded up.$(p)While holding a stack on the cursor, left-click the grid to deposit as much as fits. Right-click to deposit one item."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:inventory/transfers",
+        "biginventory:weight/capacity"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "Curios Configuration",
+  "category": "biginventory:server",
+  "icon": "biginventory:red_pouch",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Pouches and Bags share three Hip slots by default. Echo Rings use Ring and Endant uses Necklace. Curios datapacks or its common config can change slot counts. Endant still only allows one equipped copy."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Additional Capacity",
+      "text": "$(thing)curioCapacity$() is a list of signed bonuses. For example, $(item)biginventory:bag@hip=20$() adds 20 beyond the Bag's built-in effect when worn at the Hip. Negative values subtract capacity. Omit the slot to apply the rule wherever the item is equipped."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Rule Order",
+      "text": "A slot-specific value takes priority over a general value for the same item. The last duplicate rule wins. Only equipped Curios contribute. These changes are included before Echo Rings multiply capacity."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:weight/capacity_bonuses",
+        "biginventory:weight/encumbrance"
+      ]
+    }
+  ]
+}

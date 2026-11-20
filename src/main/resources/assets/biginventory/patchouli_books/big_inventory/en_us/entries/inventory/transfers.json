@@ -1,0 +1,27 @@
+{
+  "name": "Quick Transfers",
+  "category": "biginventory:inventory",
+  "icon": "minecraft:hopper",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "In your own inventory, $(thing)Shift-click$() a hotbar stack to send it to storage. Shift-click a stored entry to send up to one stack back to the hotbar. The transfer moves only what fits."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Open Containers",
+      "text": "With a chest or another supported split inventory open, Shift-click a storage entry to send items into the open container. Storage keeps whatever the destination cannot accept. The hotbar still uses the container's normal Shift-click behavior."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Other Mods",
+      "text": "Supported screens replace the usual player storage rows with the storage grid. Some modded screens with custom layouts need their own integration. With JEI installed, click either search field to choose where your typing goes."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Crafting",
+      "text": "Use the 2×2 crafting grid in your inventory or work at a crafting table as usual. The vanilla recipe book can use eligible ingredients from storage, even when they span multiple stacks."
+    }
+  ]
+}

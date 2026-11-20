@@ -1,0 +1,6 @@
+{
+  "name": "Using Your Inventory",
+  "description": "Find, move, and refill items from your backpack.",
+  "icon": "minecraft:chest",
+  "sortnum": 0
+}

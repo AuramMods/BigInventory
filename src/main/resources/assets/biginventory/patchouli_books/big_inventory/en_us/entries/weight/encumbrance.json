@@ -1,0 +1,22 @@
+{
+  "name": "Over Capacity",
+  "category": "biginventory:weight",
+  "icon": "minecraft:iron_boots",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "If a deposit would put you over capacity, only the amount that fits moves. You can become over capacity after removing gear or after the server changes a weight or capacity setting. Your current items stay in storage."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Recovering",
+      "text": "While over capacity, your movement speed is halved and you get Mining Fatigue I. You can still take items out. Unload items or restore your capacity to recover. The penalty ends once your stored weight is at or below capacity."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Death and Respawn",
+      "text": "On ordinary death, backpack contents drop along with the rest of your inventory. A world using $(thing)keepInventory$() retains them across respawn."
+    }
+  ]
+}

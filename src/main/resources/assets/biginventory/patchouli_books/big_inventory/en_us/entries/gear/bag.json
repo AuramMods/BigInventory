@@ -1,0 +1,29 @@
+{
+  "name": "Bag",
+  "category": "biginventory:gear",
+  "icon": "biginventory:bag",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "A Bag adds $(thing)352 storage capacity$() in a Hip slot. Each equipped Bag adds 15% exhaustion from sprinting, jumping, and swimming. That makes these actions drain saturation or hunger sooner. Normal walking and natural regeneration keep their usual cost."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "biginventory:bag",
+      "text": "Use one string and four Pouches. The input Pouches can be different colors."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Multiple Bags",
+      "text": "The movement penalty adds per Bag. One gives +15%, two give +30%, and three give +45%. Three Bags add 1,056 capacity before any Echo Rings."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:gear/pouch",
+        "biginventory:gear/echo_ring"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "Echo Ring",
+  "category": "biginventory:gear",
+  "icon": "biginventory:echo_ring",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Each Echo Ring adds $(thing)50% capacity$() after flat adjustments from Pouches, Bags, and configured Curios. It fits a Ring slot. Players have two Ring slots by default, and two Echo Rings double the subtotal."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "biginventory:echo_ring",
+      "text": "Craft an Echo Ring with an echo shard and three gold ingots."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:weight/capacity_bonuses",
+        "biginventory:gear/endant"
+      ]
+    }
+  ]
+}

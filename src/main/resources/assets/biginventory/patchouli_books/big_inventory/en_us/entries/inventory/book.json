@@ -1,0 +1,17 @@
+{
+  "name": "Big Inventory Book",
+  "category": "biginventory:inventory",
+  "icon": "minecraft:book",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Right-click the Big Inventory Book to open this guide. With Patchouli installed, you can find it in the Creative Tools & Utilities tab or craft it in a regular crafting grid."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "biginventory:big_inventory_book",
+      "text": "Combine a book, gray dye, and a chest in any arrangement."
+    }
+  ]
+}

@@ -4,6 +4,8 @@ BigInventory replaces the player backpack with weight-limited storage on Minecra
 
 ## Play
 
+With Patchouli installed, craft the **Big Inventory Book** from a book, gray dye, and a chest. Right-click it to open the guide to storage controls, weight, accessories, and server settings. The book is also in the creative Tools & Utilities tab. Its gray interface is adapted from the Extra Utilities Rebirth field guide.
+
 Open the inventory and search by item name or registry ID. Left-click a matching entry to take up to one stack. Right-click to take half of that amount. Click the grid while carrying a stack to deposit it, or right-click to deposit one. In your own inventory, shift-click to move items between the hotbar and storage. With a chest or another supported container open, shift-click a storage entry to send it to the container. Scroll the grid to reach more entries.
 
 The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
@@ -30,7 +32,7 @@ Use a Java 17 JDK and the included Gradle wrapper. The project targets Minecraft
 ./gradlew runClient
 ```
 
-The importer copies Auram's JEI 15.20.0.129, Jade 11.13.2 and Curios 5.14.1+1.20.1 from the default macOS PrismLauncher instance. To use another location, pass its mods directory as the argument to the importer. On Windows, you can also place the three original jars directly in `dev-mods` and run `gradlew.bat runClient`. The exact artifact names and versions are in [the dev mod list](dev-mods/auram.txt).
+The importer copies Auram's JEI 15.20.0.129, Jade 11.13.2, Curios 5.14.1+1.20.1, and Patchouli 84.1 from the default macOS PrismLauncher instance. To use another location, pass its mods directory as the argument to the importer. On Windows, you can also place the original jars directly in `dev-mods` and run `gradlew.bat runClient`. The exact artifact names and versions are in [the dev mod list](dev-mods/auram.txt).
 
 ForgeGradle remaps the local copies for the development runtime. The third-party jars stay local. The client uses `run/` for its worlds, config and logs.
 

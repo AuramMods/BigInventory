@@ -1,0 +1,29 @@
+{
+  "name": "Endant",
+  "category": "biginventory:gear",
+  "icon": "biginventory:endant",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Equip one Endant in a Necklace slot. The first stack's worth of each stored item variant is charged at full weight. Every additional item of that variant costs half its usual weight. Splitting items between stacks inside storage does not change the calculation."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "biginventory:endant",
+      "text": "Place a chain, ender chest, and end crystal in a vertical column."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Weight Examples",
+      "text": "At the default footprint factor, 128 cobblestone weigh $(thing)96$(). The first 64 weigh 64 and the next 64 weigh 32. Add all fractional amounts before rounding down. For example, 65 cobblestone plus 65 dirt weigh 129."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:weight/capacity",
+        "biginventory:weight/encumbrance"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "Pouches",
+  "category": "biginventory:gear",
+  "icon": "biginventory:blue_pouch",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "A Pouch adds $(thing)98 storage capacity$() when equipped in a Hip slot. Three Hip slots are available by default. Three Pouches add 294 capacity, and you can mix Pouches and Bags in those slots."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "biginventory:blue_pouch",
+      "text": "Use seven leather and one iron nugget around a wool block. The wool sets the pouch color."
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "biginventory:dye_red_pouch",
+      "text": "Combine a Pouch with any dye to change its color. Every color has the same capacity."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "All 16 Colors",
+      "text": "White, Orange, Magenta, Light Blue, Yellow, Lime, Pink, Gray, Light Gray, Cyan, Purple, Blue, Brown, Green, Red, and Black."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:gear/bag",
+        "biginventory:weight/capacity_bonuses"
+      ]
+    }
+  ],
+  "extra_recipe_mappings": {
+    "biginventory:white_pouch": 0,
+    "biginventory:orange_pouch": 0,
+    "biginventory:magenta_pouch": 0,
+    "biginventory:light_blue_pouch": 0,
+    "biginventory:yellow_pouch": 0,
+    "biginventory:lime_pouch": 0,
+    "biginventory:pink_pouch": 0,
+    "biginventory:gray_pouch": 0,
+    "biginventory:light_gray_pouch": 0,
+    "biginventory:cyan_pouch": 0,
+    "biginventory:purple_pouch": 0,
+    "biginventory:blue_pouch": 0,
+    "biginventory:brown_pouch": 0,
+    "biginventory:green_pouch": 0,
+    "biginventory:red_pouch": 0,
+    "biginventory:black_pouch": 0
+  }
+}

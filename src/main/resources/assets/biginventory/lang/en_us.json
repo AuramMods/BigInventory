@@ -1,6 +1,8 @@
 {
   "biginventory.search": "Search",
   "biginventory.stored": "Stored: %s",
+  "book.biginventory.big_inventory.name": "Big Inventory Book",
+  "book.biginventory.big_inventory.landing": "Use your hotbar for what you need now and your backpack for everything else. Start with $(l:biginventory:inventory/controls)storage controls$(/l), or see how $(l:biginventory:weight/capacity)weight and capacity$(/l) work.",
   "curios.identifier.hip": "Hip",
   "curios.modifiers.hip": "When worn on hip:",
   "biginventory.tooltip.capacity": "+%s storage capacity",

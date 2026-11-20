@@ -1,0 +1,22 @@
+{
+  "name": "book.biginventory.big_inventory.name",
+  "landing_text": "book.biginventory.big_inventory.landing",
+  "model": "biginventory:big_inventory_book",
+  "creative_tab": "minecraft:tools_and_utilities",
+  "use_resource_pack": true,
+  "book_texture": "biginventory:textures/gui/book.png",
+  "filler_texture": "biginventory:textures/gui/page_filler.png",
+  "crafting_texture": "biginventory:textures/gui/crafting.png",
+  "text_color": "292929",
+  "header_color": "383838",
+  "nameplate_color": "e6e6e6",
+  "link_color": "414141",
+  "link_hover_color": "5d5d5d",
+  "text_overflow_mode": "resize",
+  "show_progress": false,
+  "show_toasts": false,
+  "macros": {
+    "$(item)": "$(#454545)",
+    "$(thing)": "$(#454545)"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "Capacity and Item Weight",
+  "category": "biginventory:weight",
+  "icon": "minecraft:anvil",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "A new world starts with $(thing)500 storage capacity$() by default. Storage is limited by total weight. Matching items can span many stacks, and different variants can each have an entry. Hotbar and equipment items do not use that capacity."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Footprint",
+      "text": "$(thing)Weight per item$() is the footprint factor divided by the item's maximum stack size, rounded up. The factor is 32 by default.$(br2)$(li)Cobblestone (stacks to 64) weighs 1.$(li)Empty buckets (stack to 16) weigh 2.$(li)Unstackable tools weigh 32."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Item Variants",
+      "text": "Weight normally adds across every item in storage. Different damage, names, enchantments, or other item data can make two stacks separate variants. $(l:biginventory:gear/endant)Endant$(/l) discounts quantities beyond the first stack of a variant."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:weight/capacity_bonuses",
+        "biginventory:weight/encumbrance",
+        "biginventory:server/storage_settings"
+      ]
+    }
+  ]
+}

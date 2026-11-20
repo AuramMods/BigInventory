@@ -1,0 +1,26 @@
+{
+  "name": "Stacking Bonuses",
+  "category": "biginventory:weight",
+  "icon": "biginventory:echo_ring",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "Add all flat bonuses or penalties to base capacity first. A Pouch adds 98 and a Bag adds 352. Equip one of each with a base of 500 and you have 950 capacity."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Echo Rings",
+      "text": "Each $(l:biginventory:gear/echo_ring)Echo Ring$(/l) adds 50% of that same subtotal. At 950, one ring gives 1,425 and two give 1,900. Capacity rounds down to a whole number and has a minimum of zero."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:gear/pouch",
+        "biginventory:gear/bag",
+        "biginventory:gear/endant",
+        "biginventory:server/curios_settings"
+      ]
+    }
+  ]
+}

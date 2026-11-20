@@ -1,0 +1,6 @@
+{
+  "name": "Server Settings",
+  "description": "Adjust weight, base capacity, refill, and Curios bonuses for a world.",
+  "icon": "minecraft:comparator",
+  "sortnum": 3
+}

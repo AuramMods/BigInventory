@@ -21,3 +21,10 @@ mandatory=true
 versionRange="[1.20.1]"
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.biginventory]]
+modId="patchouli"
+mandatory=false
+versionRange="[1,)"
+ordering="AFTER"
+side="BOTH"

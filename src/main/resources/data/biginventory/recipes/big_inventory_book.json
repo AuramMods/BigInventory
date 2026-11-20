@@ -1,0 +1,20 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        { "type": "forge:mod_loaded", "modid": "patchouli" }
+      ],
+      "recipe": {
+        "type": "patchouli:shapeless_book_recipe",
+        "book": "biginventory:big_inventory",
+        "ingredients": [
+          { "item": "minecraft:book" },
+          { "item": "minecraft:gray_dye" },
+          { "item": "minecraft:chest" }
+        ],
+        "result": { "item": "patchouli:guide_book", "count": 1 }
+      }
+    }
+  ]
+}

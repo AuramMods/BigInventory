@@ -1,0 +1,33 @@
+{
+  "name": "Hotbar and Refill",
+  "category": "biginventory:inventory",
+  "icon": "minecraft:stone_pickaxe",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The chest icon beside your hotbar shows how much capacity you are using. The ring fills as storage fills. Crouch to see the percentage used."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Held Item Count",
+      "text": "When you hold an item such as cobblestone, the number on the right counts matching items in the hotbar and backpack together. Tool items such as pickaxes suppress the count. Large numbers are abbreviated to whole thousands, so 1,396 appears as 1k."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Picking Up Items",
+      "text": "Pickups merge into matching hotbar or offhand stacks first. They then use empty hotbar slots before going into the backpack. Items that cannot fit stay on the ground."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Automatic Refill",
+      "text": "When the selected stack is used up or the selected tool breaks, refill can move one stack from storage into that empty hotbar slot. Stack refills use matching item data. A broken damageable tool can be replaced by another of the same item type. Refill is on by default."
+    },
+    {
+      "type": "patchouli:relations",
+      "entries": [
+        "biginventory:server/storage_settings"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Creative Inventory",
+  "category": "biginventory:inventory",
+  "icon": "minecraft:grass_block",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The player inventory tab in Creative has the same searchable backpack and hotbar transfers. The other Creative tabs are the normal item catalog."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Creative Trash",
+      "text": "Clicking the trash slot with a held stack discards the stack. $(thing)Shift-clicking the trash slot clears your inventory, including backpack storage.$()"
+    }
+  ]
+}

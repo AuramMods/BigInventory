@@ -1,0 +1,15 @@
+{
+  "conditions": [
+    { "type": "forge:mod_loaded", "modid": "patchouli" }
+  ],
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_book": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [ { "items": [ "minecraft:book" ] } ]
+      }
+    }
+  },
+  "rewards": { "recipes": [ "biginventory:big_inventory_book" ] }
+}

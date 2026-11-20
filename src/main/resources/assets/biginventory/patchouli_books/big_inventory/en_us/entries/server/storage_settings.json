@@ -1,0 +1,22 @@
+{
+  "name": "World Configuration",
+  "category": "biginventory:server",
+  "icon": "minecraft:writable_book",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "The host controls these settings per world in $(thing)serverconfig/biginventory-server.toml$(), under the $(thing)[storage]$() section. In singleplayer, serverconfig is inside the save folder."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Capacity and Weight",
+      "text": "$(li)$(thing)baseCapacity$() starts at 500 and accepts nonnegative integers.$(li)$(thing)footprintFactor$() starts at 32 and accepts integers from 1 to 8192. It changes how expensive small stacks are.$(p)Explore the $(l:https://www.desmos.com/calculator/py8ad6ng5t)weight curve$(/l)."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Refill",
+      "text": "$(thing)refillHotbar$() defaults to true. Set it to false to disable automatic stack and tool refills. Use $(l:biginventory:server/curios_settings)curioCapacity$(/l) to add rules for equipped accessories."
+    }
+  ]
+}
