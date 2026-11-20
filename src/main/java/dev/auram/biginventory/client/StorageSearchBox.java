@@ -1,5 +1,6 @@
 package dev.auram.biginventory.client;
 
+import dev.auram.biginventory.mixin.FontColor;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -53,9 +54,13 @@ public final class StorageSearchBox extends EditBox {
         int x = getX();
         int y = getY();
         int outerWidth = getWidth();
-        graphics.fill(x, y, x + outerWidth, y + HEIGHT, isFocused() ? 0xffeeeeee : 0xffd5d5d5);
-        graphics.fill(x, y + HEIGHT - 1, x + outerWidth, y + HEIGHT, isFocused() ? 0xff707070 : 0xffa5a5a5);
-        renderMagnifier(graphics, x + ICON_X, y + 2);
+        InventorySkin.fill(graphics, x, y, outerWidth, HEIGHT,
+                isFocused() ? InventorySkin.Tone.SEARCH_FOCUSED : InventorySkin.Tone.SEARCH_IDLE);
+        InventorySkin.fill(graphics, x, y + HEIGHT - 1, outerWidth, 1,
+                isFocused() ? InventorySkin.Tone.SEARCH_FOCUSED_EDGE : InventorySkin.Tone.SEARCH_IDLE_EDGE);
+        // Match the text contrast adjustment for the magnifier and the empty-field caret.
+        int ink = FontColor.bigInventory$adjustColor(INK);
+        renderMagnifier(graphics, x + ICON_X, y + 2, ink);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x + TEXT_X, y + 3, 0);
@@ -65,9 +70,9 @@ public final class StorageSearchBox extends EditBox {
         width = textWidth;
         try {
             if (getValue().isEmpty()) {
-                graphics.drawString(font, getMessage(), x, y, 0xff606060, false);
+                graphics.drawString(font, getMessage(), x, y, ink == INK ? 0xff606060 : ink, false);
                 if (isFocused() && (Util.getMillis() - focusedAt) / 300 % 2 == 0) {
-                    graphics.fill(x - 2, y - 1, x - 1, y + 9, INK);
+                    graphics.fill(x - 2, y - 1, x - 1, y + 9, ink);
                 }
             } else {
                 super.renderWidget(graphics, mouseX, mouseY, time);
@@ -78,13 +83,13 @@ public final class StorageSearchBox extends EditBox {
         }
     }
 
-    private static void renderMagnifier(GuiGraphics graphics, int x, int y) {
-        graphics.hLine(x + 1, x + 3, y, INK);
-        graphics.hLine(x + 1, x + 3, y + 4, INK);
-        graphics.vLine(x, y, y + 4, INK);
-        graphics.vLine(x + 4, y, y + 4, INK);
-        graphics.fill(x + 4, y + 4, x + 5, y + 5, INK);
-        graphics.fill(x + 5, y + 5, x + 6, y + 6, INK);
-        graphics.fill(x + 6, y + 6, x + 7, y + 7, INK);
+    private static void renderMagnifier(GuiGraphics graphics, int x, int y, int ink) {
+        graphics.hLine(x + 1, x + 3, y, ink);
+        graphics.hLine(x + 1, x + 3, y + 4, ink);
+        graphics.vLine(x, y, y + 4, ink);
+        graphics.vLine(x + 4, y, y + 4, ink);
+        graphics.fill(x + 4, y + 4, x + 5, y + 5, ink);
+        graphics.fill(x + 5, y + 5, x + 6, y + 6, ink);
+        graphics.fill(x + 6, y + 6, x + 7, y + 7, ink);
     }
 }

@@ -107,7 +107,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             if (tab.getType() != CreativeModeTab.Type.INVENTORY) renderTabButton(graphics, tab);
         }
         InventorySkin.panel(graphics, leftPos, topPos, imageWidth, imageHeight);
-        InventorySkin.well(graphics, leftPos + 72, topPos + 6, 34, 43, 0xff202020);
+        InventorySkin.well(graphics, leftPos + 72, topPos + 6, 34, 43, InventorySkin.Tone.PREVIEW);
         for (Slot slot : menu.slots) {
             if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);
         }

@@ -45,7 +45,7 @@ final class BackpackChestScreen extends ContainerScreen {
         InventorySkin.panel(graphics, leftPos, topPos + chestBottom, imageWidth, imageHeight - chestBottom);
         for (int i = 0; i < 9; i++) {
             int px = leftPos + 7 + i * 18;
-            InventorySkin.well(graphics, px, bottom - 25, 18, 18, 0xff8c8c8c);
+            InventorySkin.slot(graphics, px, bottom - 25);
         }
         grid.render(graphics, x, y);
     }

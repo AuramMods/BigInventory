@@ -60,7 +60,7 @@ public final class ContainerBackpack {
         if (active.visible()) {
             int x = active.screen().getGuiLeft() + active.slotX() - 1;
             int y = active.screen().getGuiTop() + active.slotY();
-            event.getGuiGraphics().fill(x, y - 1, x + StorageGrid.HOTBAR_WIDTH, y + 53, InventorySkin.FACE);
+            InventorySkin.fill(event.getGuiGraphics(), x, y - 1, StorageGrid.HOTBAR_WIDTH, 54, InventorySkin.Tone.PANEL);
             active.grid().render(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
         }
     }

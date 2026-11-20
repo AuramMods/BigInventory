@@ -85,13 +85,14 @@ final class BackpackScreen extends InventoryScreen {
     protected void renderBg(GuiGraphics graphics, float time, int mouseX, int mouseY) {
         layoutControls();
         InventorySkin.panel(graphics, leftPos, topPos, imageWidth, imageHeight);
-        InventorySkin.well(graphics, leftPos + PREVIEW_LEFT, topPos + PREVIEW_TOP, PREVIEW_WIDTH, PREVIEW_HEIGHT, 0xff202020);
+        InventorySkin.well(graphics, leftPos + PREVIEW_LEFT, topPos + PREVIEW_TOP,
+                PREVIEW_WIDTH, PREVIEW_HEIGHT, InventorySkin.Tone.PREVIEW);
         Slot result = menu.getSlot(InventoryMenu.RESULT_SLOT);
         Slot lastInputInRow = menu.getSlot(InventoryMenu.CRAFT_SLOT_START + menu.getGridWidth() - 1);
         // JEI's vanilla inventory hotspot lines up with the tip of the arrow.
         InventorySkin.craftingArrow(graphics, leftPos + lastInputInRow.x + 23,
                 leftPos + result.x - 12, topPos + result.y + 8);
-        InventorySkin.well(graphics, leftPos + result.x - 4, topPos + result.y - 4, 24, 24, 0xff8c8c8c);
+        InventorySkin.well(graphics, leftPos + result.x - 4, topPos + result.y - 4, 24, 24, InventorySkin.Tone.SLOT);
         for (int index = 1; index < menu.slots.size(); index++) {
             Slot slot = menu.getSlot(index);
             if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);

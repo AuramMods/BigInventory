@@ -93,12 +93,7 @@ final class StorageGrid {
             int index = rowOffset * columns + cell;
             int px = x + cell % columns * cellSize;
             int py = y + cell / columns * cellSize;
-            if (vanillaSlots) {
-                InventorySkin.vanillaSlot(graphics, px, py, cellSize, index == hovered);
-            } else {
-                InventorySkin.well(graphics, px, py, cellSize - 1, cellSize - 1,
-                        index == hovered ? 0xffb1b1b1 : 0xff929292);
-            }
+            InventorySkin.storageSlot(graphics, px, py, cellSize, vanillaSlots, index == hovered);
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
             if (swap != null && swap.hides(entry)) continue;
@@ -112,11 +107,11 @@ final class StorageGrid {
         }
         int railX = railX();
         int length = gridHeight();
-        InventorySkin.well(graphics, railX, y, railWidth, length, 0xff858585);
+        InventorySkin.well(graphics, railX, y, railWidth, length, InventorySkin.Tone.RAIL);
         int thumb = thumbHeight();
         int offset = maxRow() == 0 ? 0 : (length - thumb) * rowOffset / maxRow();
         if (maxRow() > 0) {
-            graphics.fill(railX + 1, y + offset, railX + railWidth - 1, y + offset + thumb, 0xffdcdcdc);
+            InventorySkin.fill(graphics, railX + 1, y + offset, railWidth - 2, thumb, InventorySkin.Tone.THUMB);
         }
     }
 
