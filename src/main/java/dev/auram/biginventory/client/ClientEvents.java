@@ -4,6 +4,7 @@ import dev.auram.biginventory.BigInventory;
 import dev.auram.biginventory.StorageNetwork.Hud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -23,8 +24,10 @@ import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.common.ToolActions;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +37,7 @@ public final class ClientEvents {
     private static final ItemStack CHEST = new ItemStack(Items.CHEST);
     private static final int RING_RADIUS = 8;
     private static final List<RingPixel> RING_PIXELS = ringPixels();
+    private static Screen sweepingScreen;
 
     @SubscribeEvent
     public static void opening(ScreenEvent.Opening event) {
@@ -52,7 +56,48 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public static void loggedOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        sweepingScreen = null;
         ClientStorage.reset();
+    }
+
+    // Mouse Tweaks reads its settings on the native press event before we claim a storage sweep.
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void startStorageSweep(ScreenEvent.MouseButtonPressed.Pre event) {
+        if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_LEFT) return;
+        if (sweepingScreen != null) {
+            var previous = ClientStorage.grid(sweepingScreen);
+            if (previous != null) previous.stopSweep();
+            sweepingScreen = null;
+        }
+        if (!Screen.hasShiftDown()) return;
+        var grid = ClientStorage.grid(event.getScreen());
+        if (grid != null && grid.startSweep(event.getMouseX(), event.getMouseY())) {
+            sweepingScreen = event.getScreen();
+            sweepingScreen.setFocused(null);
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void dragStorageSweep(ScreenEvent.MouseDragged.Pre event) {
+        if (event.getMouseButton() != GLFW.GLFW_MOUSE_BUTTON_LEFT || sweepingScreen != event.getScreen()) return;
+        var grid = ClientStorage.grid(event.getScreen());
+        if (grid != null) grid.dragSweep(event.getMouseX(), event.getMouseY());
+        event.setCanceled(true);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOW, receiveCanceled = true)
+    public static void finishStorageSweep(ScreenEvent.MouseButtonReleased.Pre event) {
+        if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_LEFT || sweepingScreen != event.getScreen()) return;
+        var grid = ClientStorage.grid(event.getScreen());
+        if (grid != null) grid.stopSweep();
+        sweepingScreen = null;
+        event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public static void closeStorageSweep(ScreenEvent.Closing event) {
+        if (sweepingScreen == event.getScreen()) sweepingScreen = null;
     }
 
     @SubscribeEvent

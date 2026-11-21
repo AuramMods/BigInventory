@@ -122,7 +122,7 @@ public final class ContainerBackpack {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void click(ScreenEvent.MouseButtonPressed.Pre event) {
         if (active != null && active.screen() == event.getScreen() && active.visible()
                 && active.grid().click(event.getMouseX(), event.getMouseY(), event.getButton())) {

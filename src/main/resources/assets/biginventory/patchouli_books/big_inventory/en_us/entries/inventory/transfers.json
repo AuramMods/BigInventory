@@ -6,7 +6,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "In your own inventory, $(thing)Shift-click$() a hotbar stack to send it to storage. Shift-click a stored entry to send up to one stack back to the hotbar. The transfer moves only what fits."
+      "text": "In your own inventory, $(thing)Shift-click$() a hotbar stack to send it to storage. Shift-click a stored entry to send up to one stack back to the hotbar. With Mouse Tweaks, hold Shift and drag with the left button across several entries."
     },
     {
       "type": "patchouli:text",

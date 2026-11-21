@@ -48,6 +48,7 @@ final class StorageGrid {
     private boolean dragging;
     private int thumbGrab;
     private StorageSwapAnimation animation;
+    private StorageSweep sweep;
 
     StorageGrid(ClientStorage.View view, Font font, String priorSearch) {
         this.view = view;
@@ -58,6 +59,7 @@ final class StorageGrid {
         search.setValue(priorSearch);
         search.setResponder(text -> {
             cancelAnimation();
+            stopSweep();
             dragging = false;
             query = StorageSearchQuery.parse(text);
             displayedChange = -1;
@@ -77,6 +79,7 @@ final class StorageGrid {
     void bounds(int x, int y, int rows, int searchGap) {
         if (this.x != x || this.y != y || this.rows != rows) {
             cancelAnimation();
+            stopSweep();
             dragging = false;
         }
         this.x = x;
@@ -114,7 +117,7 @@ final class StorageGrid {
             InventorySkin.slot(graphics, px, py, index == hovered);
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index);
-            if (swap != null && swap.hides(entry)) continue;
+            if (entry == null || swap != null && swap.hides(entry)) continue;
             graphics.renderItem(entry.icon(), px + 1, py + 1);
             graphics.renderItemDecorations(font, entry.icon(), px + 1, py + 1, "");
             if (entry.count() > 1) renderCount(graphics, entry.count(), px, py);
@@ -123,9 +126,8 @@ final class StorageGrid {
 
     void tooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (!view.renderedCarried().isEmpty()) return;
-        int index = indexUnderMouse(mouseX, mouseY);
-        if (index < 0 || index >= filtered.size()) return;
-        Entry entry = filtered.get(index);
+        Entry entry = entryAt(indexUnderMouse(mouseX, mouseY));
+        if (entry == null) return;
         List<Component> lines = new ArrayList<>(Screen.getTooltipFromItem(Minecraft.getInstance(), entry.icon()));
         lines.add(Component.translatable("biginventory.stored", entry.count()).withStyle(ChatFormatting.GRAY));
         graphics.renderTooltip(font, lines, entry.icon().getTooltipImage(), entry.icon(), mouseX, mouseY);
@@ -150,13 +152,47 @@ final class StorageGrid {
         }
         int index = indexUnderMouse(mouseX, mouseY);
         if (index < 0) return false;
+        Entry entry = entryAt(index);
         if (!view.menu.getCarried().isEmpty()) {
             view.act(-1, button == 0 ? Gesture.DEPOSIT : Gesture.DEPOSIT_ONE);
-        } else if (index < filtered.size()) {
-            view.act(filtered.get(index).id(), Screen.hasShiftDown() ? Gesture.SHIFT_TAKE
+        } else if (entry != null) {
+            view.act(entry.id(), Screen.hasShiftDown() ? Gesture.SHIFT_TAKE
                     : button == 0 ? Gesture.TAKE : Gesture.TAKE_HALF);
         }
         return true;
+    }
+
+    boolean startSweep(double mouseX, double mouseY) {
+        if (!search.visible || !inside(mouseX, mouseY) || dragging || !view.renderedCarried().isEmpty()
+                || !MouseTweaksCompat.shiftDragEnabled()) return false;
+        stopSweep();
+        refresh();
+        sweep = new StorageSweep(filtered);
+        visitSweep(mouseX, mouseY);
+        return true;
+    }
+
+    void dragSweep(double mouseX, double mouseY) {
+        if (sweep != null && search.visible && Screen.hasShiftDown() && view.renderedCarried().isEmpty()) {
+            visitSweep(mouseX, mouseY);
+        }
+    }
+
+    void stopSweep() {
+        if (sweep == null) return;
+        sweep = null;
+        displayedChange = -1;
+    }
+
+    private void visitSweep(double mouseX, double mouseY) {
+        refresh();
+        var variant = sweep.visit(indexUnderMouse(mouseX, mouseY));
+        if (variant != null) view.queueShiftTake(variant);
+    }
+
+    @Nullable
+    private Entry entryAt(int index) {
+        return index >= 0 && index < filtered.size() ? filtered.get(index) : null;
     }
 
     boolean scroll(double mouseX, double mouseY, double delta) {
@@ -223,6 +259,7 @@ final class StorageGrid {
     }
 
     private List<Entry> filter(List<Entry> entries) {
+        if (sweep != null) return sweep.layout(entries);
         if (query.isEmpty()) return entries;
         return entries.stream().filter(entry -> query.matches(entry.icon())).toList();
     }

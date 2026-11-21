@@ -12,8 +12,10 @@ import dev.auram.biginventory.StorageNetwork.ViewPage;
 import dev.auram.biginventory.StorageNetwork.ViewRequest;
 import dev.auram.biginventory.StorageNetwork.ViewStart;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.StackedContents;
@@ -27,6 +29,7 @@ import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public final class ClientStorage {
@@ -120,10 +123,23 @@ public final class ClientStorage {
                 && screen.isStorageOpen() && screen.getMenu() == menu) ? view : null;
     }
 
+    @Nullable
+    static StorageGrid grid(Screen screen) {
+        if (!(screen instanceof AbstractContainerScreen<?> container)) return null;
+        View visible = visibleView(container.getMenu());
+        return visible == null ? null : visible.grid;
+    }
+
     public static boolean interceptMenuClick(MultiPlayerGameMode gameMode, int menuId, int slot, int button, ClickType type, Player player) {
         if (view == null || view.menu != player.containerMenu || view.menu.containerId != menuId) return false;
         if (view.grid != null) view.grid.cancelAnimation();
         Slot target = slot >= 0 && slot < view.menu.slots.size() ? view.menu.getSlot(slot) : null;
+        boolean storeHotbar = type == ClickType.QUICK_MOVE && view.menu instanceof InventoryMenu && target != null
+                && target.container == player.getInventory() && Inventory.isHotbarSlot(target.getSlotIndex());
+        if (storeHotbar && view.revision != 0 && view.renderedCarried().isEmpty()) {
+            view.queueHotbar(slot, view.renderedSlot(target));
+            return true;
+        }
         ItemStack proposedSlot = target == null ? null : view.predictedSlot(target);
         if (view.predictedCursor() != null || proposedSlot != null) {
             // Replay a follow-up pickup only if the server confirms the state it was aimed at.
@@ -133,8 +149,7 @@ public final class ClientStorage {
             }
             return true;
         }
-        if (type == ClickType.QUICK_MOVE && view.menu instanceof InventoryMenu && target != null
-                && target.container == player.getInventory() && Inventory.isHotbarSlot(target.getSlotIndex())) {
+        if (storeHotbar) {
             return view.act(slot, Gesture.STORE_HOTBAR) || view.prediction != null;
         }
         return false;
@@ -164,6 +179,7 @@ public final class ClientStorage {
         private StoragePrediction prediction;
         private int acknowledgedRevision = -1;
         private MenuClick deferredClick;
+        private final LinkedHashSet<ShiftRequest> queuedShifts = new LinkedHashSet<>();
 
         View(AbstractContainerMenu menu, int token) {
             this.menu = menu;
@@ -171,7 +187,7 @@ public final class ClientStorage {
         }
 
         boolean act(int id, Gesture gesture) {
-            if (view != this || prediction != null || revision == 0 || revision != incomingRevision) return false;
+            if (!readyToAct()) return false;
             var player = Minecraft.getInstance().player;
             if (player == null) return false;
             try {
@@ -193,6 +209,36 @@ public final class ClientStorage {
             changes++;
             StorageNetwork.action(new Action(menu.containerId, token, revision, id, gesture));
             return true;
+        }
+
+        private boolean readyToAct() {
+            return view == this && prediction == null && revision != 0 && revision == incomingRevision;
+        }
+
+        void queueShiftTake(CompoundTag variant) {
+            queuedShifts.add(new ShiftRequest(-1, variant, 0));
+            sendNextShift();
+        }
+
+        private void queueHotbar(int slot, ItemStack expected) {
+            if (expected.isEmpty()) return;
+            queuedShifts.add(new ShiftRequest(slot, Backpack.variantKey(expected), expected.getCount()));
+            sendNextShift();
+        }
+
+        private void sendNextShift() {
+            if (queuedShifts.isEmpty() || !readyToAct()) return;
+            if (!menu.getCarried().isEmpty()) {
+                queuedShifts.clear();
+                return;
+            }
+            var pending = queuedShifts.iterator();
+            while (pending.hasNext()) {
+                ShiftRequest request = pending.next();
+                pending.remove();
+                int index = request.resolve(menu, entries);
+                if (index >= 0 && act(index, request.gesture())) return;
+            }
         }
 
         List<Entry> displayedEntries() {
@@ -227,7 +273,10 @@ public final class ClientStorage {
         void acknowledge(int receiptRevision) {
             if (prediction == null) return;
             acknowledgedRevision = receiptRevision;
-            if (receiptRevision == 0) revision = 0;
+            if (receiptRevision == 0) {
+                revision = 0;
+                queuedShifts.clear();
+            }
             reconcilePrediction();
 
             MenuClick click = deferredClick;
@@ -237,6 +286,7 @@ public final class ClientStorage {
                 int index = menu.slots.indexOf(click.slot());
                 if (index >= 0) click.gameMode().handleInventoryMouseClick(menu.containerId, index, click.button(), ClickType.PICKUP, click.player());
             }
+            sendNextShift();
         }
 
         private void reconcilePrediction() {
@@ -271,7 +321,28 @@ public final class ClientStorage {
                 reconcilePrediction();
                 var player = Minecraft.getInstance().player;
                 if (player != null) player.getInventory().setChanged();
+                sendNextShift();
             }
+        }
+    }
+
+    private record ShiftRequest(int hotbarSlot, CompoundTag variant, int expectedCount) {
+        Gesture gesture() {
+            return hotbarSlot < 0 ? Gesture.SHIFT_TAKE : Gesture.STORE_HOTBAR;
+        }
+
+        int resolve(AbstractContainerMenu menu, List<Entry> entries) {
+            if (hotbarSlot >= 0) {
+                if (hotbarSlot >= menu.slots.size()) return -1;
+                ItemStack stack = menu.getSlot(hotbarSlot).getItem();
+                return !stack.isEmpty() && stack.getCount() == expectedCount && variant.equals(Backpack.variantKey(stack))
+                        ? hotbarSlot : -1;
+            }
+            // A server refresh can assign a different ID to every remaining entry.
+            for (Entry entry : entries) {
+                if (variant.equals(Backpack.variantKey(entry.icon()))) return entry.id();
+            }
+            return -1;
         }
     }
 
