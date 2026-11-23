@@ -75,8 +75,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             new PlayerSlots(menu, player.getInventory()).arrange(0, HOTBAR_TOP);
             ((SlotPosition) trashSlot()).bigInventory$setY(HOTBAR_TOP);
         }
-        boolean opened = view == null;
-        if (opened) {
+        if (view == null) {
             // The picker still renders its native slots and tabs. Inventory clicks use menu zero.
             player.containerMenu = player.inventoryMenu;
             view = ClientStorage.open(player.inventoryMenu, menu.getCarried());
@@ -84,7 +83,6 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             search = addRenderableWidget(grid.search());
         }
         grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS, SEARCH_PADDING);
-        if (opened) setInitialFocus(search);
     }
 
     private void closeStorage() {

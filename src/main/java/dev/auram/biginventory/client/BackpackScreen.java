@@ -46,8 +46,7 @@ final class BackpackScreen extends InventoryScreen {
                 break;
             }
         }
-        boolean opening = view == null;
-        if (opening) view = ClientStorage.open(menu);
+        if (view == null) view = ClientStorage.open(menu);
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
         titleLabelX = menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x - 1;
         int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
@@ -56,7 +55,6 @@ final class BackpackScreen extends InventoryScreen {
         grid = new StorageGrid(view, font, query);
         search = addRenderableWidget(grid.search());
         layoutControls();
-        if (opening && search.visible) setInitialFocus(search);
     }
 
     private boolean showGrid() {

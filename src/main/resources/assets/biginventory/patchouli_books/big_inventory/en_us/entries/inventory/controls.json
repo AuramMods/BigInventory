@@ -11,7 +11,7 @@
     {
       "type": "patchouli:text",
       "title": "Find Items",
-      "text": "Start typing when the inventory opens, or click $(thing)Search$() to focus it. Search by item name or registry ID, such as $(item)minecraft:oak_log$(). Use $(thing)@ModName$() to narrow results by mod, for example $(thing)@Biomes Black$(). Scroll or drag the scrollbar to reach more entries. At smaller GUI scales, more rows can fit on screen."
+      "text": "Click $(thing)Search$() to search by item name or registry ID, such as $(item)minecraft:oak_log$(). Use $(thing)@ModName$() to narrow results by mod, for example $(thing)@Biomes Black$(). Scroll or drag the scrollbar to reach more entries. At smaller GUI scales, more rows can fit on screen."
     },
     {
       "type": "patchouli:text",
