@@ -21,7 +21,7 @@
     {
       "type": "patchouli:text",
       "title": "All 16 Colors",
-      "text": "White, Orange, Magenta, Light Blue, Yellow, Lime, Pink, Gray, Light Gray, Cyan, Purple, Blue, Brown, Green, Red, and Black."
+      "text": "White, Orange, Magenta, Light Blue, Yellow, Lime, Pink, Gray, Light Gray, Cyan, Purple, Blue, Brown, Green, Red, and Black.$(br2)Village, dungeon, and other structure chests can contain a Pouch of any color."
     },
     {
       "type": "patchouli:relations",

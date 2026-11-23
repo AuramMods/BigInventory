@@ -23,6 +23,8 @@ Server-side capacity defaults to 500. With the default footprint factor of 32, a
 
 Curios gives players three Hip slots, two Ring slots, and one Necklace slot by default. Natural regeneration uses normal exhaustion. With an Endant, 128 stored cobblestone weigh 96. Fractional weight from all stored items is added together before the total is rounded down.
 
+Village, dungeon, and other structure chests can contain a random-color Pouch or a rarer Bag. Bags are more common in Nether and End chests. End City treasure can contain an Endant, and Wardens have a 25% chance to drop an Echo Ring.
+
 ## Run the development client
 
 Use a Java 17 JDK and the included Gradle wrapper. The project targets Minecraft 1.20.1, Forge 47.4.10 and official 1.20.1 mappings.

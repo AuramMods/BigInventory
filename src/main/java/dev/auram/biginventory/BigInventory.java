@@ -15,6 +15,7 @@ public final class BigInventory {
         context.registerConfig(ModConfig.Type.SERVER, StorageConfig.SPEC);
         var modBus = context.getModEventBus();
         StorageItems.ITEMS.register(modBus);
+        AdditionalLootModifier.SERIALIZERS.register(modBus);
         modBus.addListener(StorageItems::addCreativeItems);
         modBus.addListener(this::commonSetup);
         StorageNetwork.register();

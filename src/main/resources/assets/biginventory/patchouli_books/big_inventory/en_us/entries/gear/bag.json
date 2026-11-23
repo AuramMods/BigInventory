@@ -16,7 +16,7 @@
     {
       "type": "patchouli:text",
       "title": "Multiple Bags",
-      "text": "The movement penalty adds per Bag. One gives +15%, two give +30%, and three give +45%. Three Bags add 1,056 capacity before any Echo Rings."
+      "text": "The movement penalty adds per Bag. One gives +15%, two give +30%, and three give +45%. Three Bags add 1,056 capacity before any Echo Rings.$(br2)Bags are rarer than Pouches in chests. Look in Nether and End structures for better odds."
     },
     {
       "type": "patchouli:relations",

@@ -1,0 +1,17 @@
+{
+  "type": "biginventory:additional_loot",
+  "path_segment": "chests",
+  "loot_table": "biginventory:gear/chest",
+  "conditions": [
+    {
+      "condition": "minecraft:inverted",
+      "term": {
+        "condition": "minecraft:any_of",
+        "terms": [
+          { "condition": "forge:loot_table_id", "loot_table_id": "minecraft:chests/spawn_bonus_chest" },
+          { "condition": "forge:loot_table_id", "loot_table_id": "minecraft:chests/jungle_temple_dispenser" }
+        ]
+      }
+    }
+  ]
+}

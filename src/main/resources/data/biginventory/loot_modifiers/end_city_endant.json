@@ -1,0 +1,7 @@
+{
+  "type": "biginventory:additional_loot",
+  "loot_table": "biginventory:gear/end_city",
+  "conditions": [
+    { "condition": "forge:loot_table_id", "loot_table_id": "minecraft:chests/end_city_treasure" }
+  ]
+}

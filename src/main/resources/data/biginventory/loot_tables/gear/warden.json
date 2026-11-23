@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "name": "echo_ring",
+      "rolls": 1,
+      "conditions": [{ "condition": "minecraft:random_chance", "chance": 0.25 }],
+      "entries": [{ "type": "minecraft:item", "name": "biginventory:echo_ring" }]
+    }
+  ]
+}

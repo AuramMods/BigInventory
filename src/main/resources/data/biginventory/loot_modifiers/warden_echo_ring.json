@@ -1,0 +1,7 @@
+{
+  "type": "biginventory:additional_loot",
+  "loot_table": "biginventory:gear/warden",
+  "conditions": [
+    { "condition": "forge:loot_table_id", "loot_table_id": "minecraft:entities/warden" }
+  ]
+}

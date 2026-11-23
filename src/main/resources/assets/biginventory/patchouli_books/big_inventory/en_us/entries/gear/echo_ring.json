@@ -11,7 +11,7 @@
     {
       "type": "patchouli:crafting",
       "recipe": "biginventory:echo_ring",
-      "text": "Craft an Echo Ring with an echo shard and three gold ingots."
+      "text": "Craft an Echo Ring with an echo shard and three gold ingots. Wardens also have a 25% chance to drop one."
     },
     {
       "type": "patchouli:relations",
