@@ -147,18 +147,24 @@ public final class Backpack {
         return moved;
     }
 
-    /** Vanilla additions fill the hotbar first. Explicit targets retain their slot semantics. */
-    public int add(int slot, ItemStack input) {
+    /** Insert into an explicit slot or choose a destination for an untargeted addition. */
+    public int add(int slot, ItemStack input, boolean preferStored) {
         int initial = input.getCount();
         if (slot != -1) {
             if (slot >= 0 && slot < inventory.getContainerSize()) insertAt(slot, input, initial);
             return initial - input.getCount();
         }
+
+        boolean storageFirst = preferStored
+                && inventory.items.subList(0, FIRST).stream().noneMatch(stack -> matches(stack, input))
+                && !find(stack -> matches(stack, input)).isEmpty();
+        if (storageFirst) insert(input, initial);
+
         insertMatchingHotbar(input);
         for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
             if (inventory.items.get(i).isEmpty()) insertAt(i, input, input.getCount());
         }
-        insert(input, input.getCount());
+        if (!storageFirst) insert(input, input.getCount());
         return initial - input.getCount();
     }
 

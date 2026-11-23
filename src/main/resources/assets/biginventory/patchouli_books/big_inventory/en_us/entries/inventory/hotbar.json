@@ -16,7 +16,7 @@
     {
       "type": "patchouli:text",
       "title": "Picking Up Items",
-      "text": "Pickups merge into matching hotbar or offhand stacks first. They then use empty hotbar slots before going into the backpack. Items that cannot fit stay on the ground."
+      "text": "If a matching item is already in your backpack and you have none in your hotbar, pickups go to the backpack first. Otherwise, pickups merge into matching hotbar or offhand stacks, then use open hotbar slots before the backpack. Anything that cannot fit stays on the ground."
     },
     {
       "type": "patchouli:text",

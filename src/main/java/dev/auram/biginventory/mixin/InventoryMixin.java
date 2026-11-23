@@ -51,7 +51,7 @@ abstract class InventoryMixin implements BackpackAccess {
     @Inject(method = "add(ILnet/minecraft/world/item/ItemStack;)Z", at = @At("HEAD"), cancellable = true)
     private void bigInventory$add(int slot, ItemStack input, CallbackInfoReturnable<Boolean> cir) {
         if (player.level().isClientSide || input.isEmpty()) return;
-        int moved = bigInventory$storage.add(slot, input);
+        int moved = bigInventory$storage.add(slot, input, true);
         // Vanilla creative pickups can consume entities even when the inventory is full.
         if (moved == 0 && slot == -1 && player.getAbilities().instabuild) {
             input.setCount(0);
@@ -65,7 +65,7 @@ abstract class InventoryMixin implements BackpackAccess {
             at = @At("HEAD"), cancellable = true)
     private void bigInventory$returnStack(ItemStack input, boolean sendUpdates, CallbackInfo ci) {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
-        bigInventory$storage.add(-1, input);
+        bigInventory$storage.add(-1, input, false);
         if (!input.isEmpty()) player.drop(input, false);
         // In particular, an open chest does not synchronize the offhand.
         if (sendUpdates) {
