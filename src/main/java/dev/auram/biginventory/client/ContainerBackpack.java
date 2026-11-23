@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
+import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
@@ -28,14 +29,22 @@ public final class ContainerBackpack {
     private static final int BOTTOM_MARGIN = 4;
     private static final int UPPER_SLOT_GAP = 3;
     private static Panel active;
+    private static PendingPanel pending;
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void init(ScreenEvent.Init.Pre event) {
-        if (!(event.getScreen() instanceof AbstractContainerScreen<?> screen)
+        if (event.getScreen() != Minecraft.getInstance().screen
+                || !(event.getScreen() instanceof AbstractContainerScreen<?> screen)
                 || screen instanceof BackpackScreen || screen instanceof BackpackChestScreen
                 || screen instanceof CreativeModeInventoryScreen) return;
         String query = active != null && active.screen() == screen ? active.grid().search().getValue() : "";
         if (active != null) close();
+        // Mantle resolves the central panel and initializes its sub-screens during init().
+        if (screen instanceof ContainerPanelBounds) pending = new PendingPanel(screen, query);
+        else open(screen, query);
+    }
+
+    private static void open(AbstractContainerScreen<?> screen, String query) {
         var player = Minecraft.getInstance().player;
         if (player == null || player.isSpectator()) return;
         Inventory inventory = player.getInventory();
@@ -57,7 +66,8 @@ public final class ContainerBackpack {
                     || legacy[i].y != y + (i / StorageGrid.COLUMNS) * StorageGrid.CELL) return;
         }
 
-        int nativeHeight = screen.getYSize();
+        Rect2i mainPanel = screen instanceof ContainerPanelBounds modular ? modular.bigInventory$mainPanel() : null;
+        int nativeHeight = mainPanel == null ? screen.getYSize() : mainPanel.getHeight();
         int hotbarY = hotbar[0] == null ? -1 : hotbar[0].y;
         boolean aligned = hotbarY >= y + NATIVE_ROWS * StorageGrid.CELL && hotbarY + 16 <= nativeHeight;
         for (int i = 0; aligned && i < hotbar.length; i++) {
@@ -65,7 +75,9 @@ public final class ContainerBackpack {
         }
         int gridX = x - 1;
         int gridY = y - 1;
-        int available = Math.max(0, (screen.height - nativeHeight + 1) / 2 - BOTTOM_MARGIN);
+        int nativeBottom = mainPanel == null ? (screen.height - nativeHeight) / 2 + nativeHeight
+                : mainPanel.getY() + nativeHeight;
+        int available = screen.height - nativeBottom - BOTTOM_MARGIN;
         PlayerSection section = aligned ? PlayerSection.fit(available, searchInset(screen, gridX, gridY))
                 : new PlayerSection(NATIVE_ROWS, 0, 0);
         var layout = (ContainerLayoutAccess) screen;
@@ -97,6 +109,11 @@ public final class ContainerBackpack {
 
     @SubscribeEvent
     public static void search(ScreenEvent.Init.Post event) {
+        if (pending != null && pending.screen() == event.getScreen()) {
+            PendingPanel ready = pending;
+            pending = null;
+            open(ready.screen(), ready.query());
+        }
         if (active == null || active.screen() != event.getScreen()) return;
         event.addListener(active.grid().search());
         active.layout();
@@ -159,6 +176,7 @@ public final class ContainerBackpack {
 
     @SubscribeEvent
     public static void closing(ScreenEvent.Closing event) {
+        if (pending != null && pending.screen() == event.getScreen()) pending = null;
         if (active != null && active.screen() == event.getScreen()) close();
     }
 
@@ -169,17 +187,26 @@ public final class ContainerBackpack {
         active = null;
     }
 
+    public static boolean replacesPlayerInventory(AbstractContainerScreen<?> screen) {
+        return active != null && active.screen() == screen && active.visible();
+    }
+
     public static int extendedHeight(AbstractContainerScreen<?> screen, int nativeHeight) {
-        return active != null && active.screen() == screen && active.visible()
-                ? nativeHeight + active.section().extension() : nativeHeight;
+        if (!replacesPlayerInventory(screen) || active.section().extension() == 0) return nativeHeight;
+        Rect2i panel = active.mainPanel();
+        int bottom = panel.getY() + panel.getHeight() + active.section().extension();
+        return Math.max(nativeHeight, bottom - screen.getGuiTop());
     }
 
     public static boolean insideExtension(AbstractContainerScreen<?> screen, double x, double y) {
-        if (active == null || active.screen() != screen || !active.visible()) return false;
-        int bottom = screen.getGuiTop() + active.nativeHeight();
-        int left = screen.getGuiLeft();
-        return y >= bottom && y < bottom + active.section().extension() && x >= left && x < left + screen.getXSize();
+        if (!replacesPlayerInventory(screen) || active.section().extension() == 0) return false;
+        Rect2i panel = active.mainPanel();
+        int bottom = panel.getY() + panel.getHeight();
+        return y >= bottom && y < bottom + active.section().extension()
+                && x >= panel.getX() && x < panel.getX() + panel.getWidth();
     }
+
+    private record PendingPanel(AbstractContainerScreen<?> screen, String query) {}
 
     private record PlayerSection(int rows, int searchInset, int gap) {
         static PlayerSection fit(int available, int searchInset) {
@@ -209,9 +236,15 @@ public final class ContainerBackpack {
                     && screen.width < 379);
         }
 
+        Rect2i mainPanel() {
+            return screen instanceof ContainerPanelBounds modular ? modular.bigInventory$mainPanel()
+                    : new Rect2i(screen.getGuiLeft(), screen.getGuiTop(), screen.getXSize(), nativeHeight);
+        }
+
         void layout() {
-            int x = screen.getGuiLeft() + gridX;
-            int y = screen.getGuiTop() + nativeGridY;
+            Rect2i panel = mainPanel();
+            int x = panel.getX() + gridX;
+            int y = panel.getY() + nativeGridY;
             grid.bounds(x, y + section.gridInset(), section.rows(), section.gap());
             boolean gridVisible = visible();
             grid.search().visible = gridVisible;
@@ -220,11 +253,12 @@ public final class ContainerBackpack {
         }
 
         void draw(GuiGraphics graphics, int mouseX, int mouseY) {
-            int left = screen.getGuiLeft();
-            int top = screen.getGuiTop();
+            Rect2i panel = mainPanel();
+            int left = panel.getX();
+            int top = panel.getY();
             int x = left + gridX;
             int extension = section.extension();
-            if (extension > 0) InventorySkin.extendPanel(graphics, left, top + nativeHeight, screen.getXSize(), extension);
+            if (extension > 0) InventorySkin.extendPanel(graphics, left, top + panel.getHeight(), panel.getWidth(), extension);
             if (nativeHotbarY >= 0) {
                 int nativeHotbarTop = top + nativeHotbarY - 1;
                 int slotTop = nativeHotbarTop + section.hotbarShift();

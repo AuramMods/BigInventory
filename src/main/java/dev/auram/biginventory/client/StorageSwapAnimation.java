@@ -108,8 +108,9 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
             if (index < 0 || index >= screen.getMenu().slots.size()) return null;
             slot = screen.getMenu().getSlot(index);
         }
-        int x = screen.getGuiLeft() + slot.x + 8;
-        int y = screen.getGuiTop() + slot.y + 8;
+        var panel = screen instanceof ContainerPanelBounds modular ? modular.bigInventory$mainPanel() : null;
+        int x = (panel == null ? screen.getGuiLeft() : panel.getX()) + slot.x + 8;
+        int y = (panel == null ? screen.getGuiTop() : panel.getY()) + slot.y + 8;
         return slot.isActive() && x >= 0 && x < screen.width && y >= 0 && y < screen.height
                 ? new Point(x, y) : null;
     }
