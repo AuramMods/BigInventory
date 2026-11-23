@@ -54,6 +54,8 @@ With Curios installed, add one rule per item such as `"pack:rucksack=150"` or `"
 
 ## Build
 
+Run all BigInventory builds and release checks locally using the development machine's Gradle cache. Do not add GitHub Actions workflows for this mod. Attach the locally built, reobfuscated jar to the GitHub release.
+
 ```sh
 ./gradlew build
 ```
