@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class StorageNetwork {
-    private static final String VERSION = "4";
+    private static final String VERSION = "5";
     private static final int PAGE_SIZE = 24;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
@@ -42,11 +42,16 @@ public final class StorageNetwork {
         CHANNEL.messageBuilder(ViewAck.class, 5, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(ViewAck::encode).decoder(ViewAck::decode).consumerMainThread((msg, ctx) ->
                         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientStorage.ack(msg))).add();
+        ViewportNetwork.register(CHANNEL);
     }
 
     public static void request(ViewRequest request) { CHANNEL.sendToServer(request); }
 
     public static void action(Action action) { CHANNEL.sendToServer(action); }
+
+    static void sendToServer(Object message) {
+        CHANNEL.sendToServer(message);
+    }
 
     static void send(ServerPlayer player, Object message) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);

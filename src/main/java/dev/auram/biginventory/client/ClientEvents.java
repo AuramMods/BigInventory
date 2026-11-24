@@ -60,6 +60,12 @@ public final class ClientEvents {
         ClientStorage.reset();
     }
 
+    @SubscribeEvent
+    public static void playerChanged(ClientPlayerNetworkEvent.Clone event) {
+        sweepingScreen = null;
+        ClientStorage.reset();
+    }
+
     // Mouse Tweaks reads its settings on the native press event before we claim a storage sweep.
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void startStorageSweep(ScreenEvent.MouseButtonPressed.Pre event) {

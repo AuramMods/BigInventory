@@ -1,6 +1,7 @@
 package dev.auram.biginventory.mixin;
 
 import dev.auram.biginventory.client.ClientStorage;
+import dev.auram.biginventory.client.ClientViewport;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ClickType;
@@ -13,6 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class StorageClickPredictionMixin {
     @Inject(method = "handleInventoryMouseClick", at = @At("HEAD"), cancellable = true)
     private void bigInventory$predictStorageClick(int menuId, int slot, int button, ClickType type, Player player, CallbackInfo ci) {
-        if (ClientStorage.interceptMenuClick((MultiPlayerGameMode) (Object) this, menuId, slot, button, type, player)) ci.cancel();
+        if (ClientViewport.blocksNativeClick(player.containerMenu, menuId)
+                || ClientStorage.interceptMenuClick((MultiPlayerGameMode) (Object) this, menuId, slot, button, type, player)) {
+            ci.cancel();
+        }
     }
 }

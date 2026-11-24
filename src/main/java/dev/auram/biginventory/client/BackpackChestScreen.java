@@ -12,35 +12,62 @@ final class BackpackChestScreen extends ContainerScreen {
     private static final int FOOTER = 29;
     private final Inventory inventory;
     private final int chestBottom;
-    private ClientStorage.View view;
+    private final int gridTop;
+    private ClientViewport.View view;
     private PlayerSlots playerSlots;
-    private StorageGrid grid;
+    private RealStorageGrid grid;
+    private int rows;
 
     BackpackChestScreen(ChestMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         this.inventory = inventory;
         this.chestBottom = menu.getRowCount() * 18 + 17;
+        this.gridTop = chestBottom + 11 + StorageGrid.SEARCH_HEIGHT;
     }
 
     @Override
     protected void init() {
-        int gridTop = chestBottom + 11 + StorageGrid.SEARCH_HEIGHT;
-        int rows = Mth.clamp((height - gridTop - FOOTER - 4) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
-        imageHeight = gridTop + rows * StorageGrid.CELL + FOOTER;
+        rows = Mth.clamp((height - gridTop - FOOTER - 4) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
+        imageHeight = gridTop + StorageGrid.CELL + FOOTER;
         inventoryLabelY = -30000;
         super.init();
-        if (view == null) view = ClientStorage.open(menu);
+        if (view == null) view = ClientViewport.open(menu, inventory);
+        if (view == null) return;
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, inventory);
         playerSlots.arrange(0, imageHeight - 24);
         String query = grid != null ? grid.search().getValue() : "";
-        grid = new StorageGrid(view, font, query);
-        grid.bounds(leftPos + 7, topPos + gridTop, rows);
+        grid = new RealStorageGrid(view, font, query);
+        grid.bounds(leftPos + 7, topPos + gridTop, leftPos, topPos, rows, true);
         addRenderableWidget(grid.search());
     }
 
     @Override
+    public void render(GuiGraphics graphics, int x, int y, float time) {
+        if (grid != null) {
+            grid.bounds(leftPos + 7, topPos + gridTop, leftPos, topPos, rows, true);
+            int preferredHeight = gridTop + grid.shownRows() * StorageGrid.CELL + FOOTER;
+            if (preferredHeight != imageHeight && menu.getCarried().isEmpty()) {
+                imageHeight = preferredHeight;
+                topPos = (height - imageHeight) / 2;
+                playerSlots.arrange(0, imageHeight - 24);
+                grid.bounds(leftPos + 7, topPos + gridTop, leftPos, topPos, rows, true);
+            }
+        }
+        super.render(graphics, x, y, time);
+    }
+
+    @Override
     protected void renderBg(GuiGraphics graphics, float time, int x, int y) {
-        super.renderBg(graphics, time, x, y);
+        if (grid == null) {
+            super.renderBg(graphics, time, x, y);
+            return;
+        }
+        graphics.enableScissor(leftPos, topPos, leftPos + imageWidth, topPos + chestBottom);
+        try {
+            super.renderBg(graphics, time, x, y);
+        } finally {
+            graphics.disableScissor();
+        }
         int bottom = topPos + imageHeight;
         InventorySkin.panel(graphics, leftPos, topPos + chestBottom, imageWidth, imageHeight - chestBottom);
         for (int i = 0; i < 9; i++) {
@@ -51,20 +78,14 @@ final class BackpackChestScreen extends ContainerScreen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int x, int y, float time) {
-        super.render(graphics, x, y, time);
-        grid.tooltip(graphics, x, y);
-    }
-
-    @Override
     protected void containerTick() {
         super.containerTick();
-        grid.search().tick();
+        if (grid != null) grid.search().tick();
     }
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (grid.click(x, y, button)) {
+        if (grid != null && grid.click(x, y, button)) {
             setFocused(null);
             return true;
         }
@@ -73,22 +94,22 @@ final class BackpackChestScreen extends ContainerScreen {
 
     @Override
     public boolean mouseScrolled(double x, double y, double delta) {
-        return grid.scroll(x, y, delta) || super.mouseScrolled(x, y, delta);
+        return grid != null && grid.scroll(x, y, delta) || super.mouseScrolled(x, y, delta);
     }
 
     @Override
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
-        return grid.drag(y) || super.mouseDragged(x, y, button, dx, dy);
+        return grid != null && grid.drag(y) || super.mouseDragged(x, y, button, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
-        return grid.release() || super.mouseReleased(x, y, button);
+        return grid != null && grid.release() || super.mouseReleased(x, y, button);
     }
 
     @Override
     public boolean keyPressed(int key, int scanCode, int modifiers) {
-        if (getFocused() == grid.search() && key != GLFW.GLFW_KEY_ESCAPE && key != GLFW.GLFW_KEY_TAB) {
+        if (grid != null && getFocused() == grid.search() && key != GLFW.GLFW_KEY_ESCAPE && key != GLFW.GLFW_KEY_TAB) {
             grid.search().keyPressed(key, scanCode, modifiers);
             return true;
         }
@@ -97,7 +118,7 @@ final class BackpackChestScreen extends ContainerScreen {
 
     @Override
     public void removed() {
-        ClientStorage.close(view);
+        ClientViewport.close(view);
         view = null;
         if (playerSlots != null) playerSlots.restore();
         playerSlots = null;

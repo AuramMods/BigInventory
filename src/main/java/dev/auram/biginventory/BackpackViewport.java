@@ -47,7 +47,7 @@ public final class BackpackViewport {
     public boolean validates(int[] indices, Backpack backpack) {
         if (indices.length != cells.size()) return false;
         long lastRow = ((long) backpack.size() + COLUMNS - 1) / COLUMNS;
-        long limit = lastRow * COLUMNS + MAX_CELLS;
+        long limit = lastRow * COLUMNS + COLUMNS;
         Set<Integer> used = new HashSet<>();
         for (int index : indices) {
             if (index == SlotBinding.INACTIVE) continue;

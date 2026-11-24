@@ -67,6 +67,7 @@ public final class ClientStorage {
     static void reset() {
         view = null;
         hud = null;
+        ClientViewport.reset();
     }
 
     public static void start(ViewStart start) {

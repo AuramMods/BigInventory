@@ -18,9 +18,9 @@ final class BackpackScreen extends InventoryScreen {
     private static final int PREVIEW_WIDTH = 50;
     private static final int PREVIEW_HEIGHT = 72;
     private final Player player;
-    private ClientStorage.View view;
+    private ClientViewport.View view;
     private PlayerSlots playerSlots;
-    private StorageGrid grid;
+    private RealStorageGrid grid;
     // JEI recognizes focused EditBox fields on a screen when routing keyboard input.
     private StorageSearchBox search;
     private ImageButton recipeButton;
@@ -35,7 +35,7 @@ final class BackpackScreen extends InventoryScreen {
     protected void init() {
         imageWidth = PANEL_WIDTH;
         rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
-        imageHeight = STORAGE_TOP + rows * StorageGrid.CELL + FOOTER;
+        imageHeight = STORAGE_TOP + StorageGrid.CELL + FOOTER;
         recipeButton = null;
         super.init();
         if (minecraft.gameMode.hasInfiniteItems()) return;
@@ -46,13 +46,14 @@ final class BackpackScreen extends InventoryScreen {
                 break;
             }
         }
-        if (view == null) view = ClientStorage.open(menu);
+        if (view == null) view = ClientViewport.open(menu, player.getInventory());
+        if (view == null) return;
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
         titleLabelX = menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x - 1;
         int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
         playerSlots.arrange(gridLeft - 7, imageHeight - 22);
         String query = search == null ? "" : search.getValue();
-        grid = new StorageGrid(view, font, query);
+        grid = new RealStorageGrid(view, font, query);
         search = addRenderableWidget(grid.search());
         layoutControls();
     }
@@ -63,21 +64,32 @@ final class BackpackScreen extends InventoryScreen {
 
     private void layoutControls() {
         if (grid == null) return;
+        int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
+        grid.bounds(leftPos + gridLeft, topPos + STORAGE_TOP, leftPos, topPos, rows, showGrid());
+        int preferredHeight = STORAGE_TOP + grid.shownRows() * StorageGrid.CELL + FOOTER;
+        if (preferredHeight != imageHeight && menu.getCarried().isEmpty()) {
+            imageHeight = preferredHeight;
+            topPos = (height - imageHeight) / 2;
+            playerSlots.arrange(gridLeft - 7, imageHeight - 22);
+            grid.bounds(leftPos + gridLeft, topPos + STORAGE_TOP, leftPos, topPos, rows, showGrid());
+        }
         if (recipeButton != null) {
             Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
             recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);
         }
-        grid.bounds(leftPos + (imageWidth - StorageGrid.WIDTH) / 2, topPos + STORAGE_TOP, rows);
-        search.visible = showGrid();
         if (!search.visible) {
-            grid.cancelAnimation();
             if (getFocused() == search) setFocused(null);
         }
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float time, int mouseX, int mouseY) {
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float time) {
         layoutControls();
+        super.render(graphics, mouseX, mouseY, time);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics graphics, float time, int mouseX, int mouseY) {
         InventorySkin.panel(graphics, leftPos, topPos, imageWidth, imageHeight);
         InventorySkin.well(graphics, leftPos + PREVIEW_LEFT, topPos + PREVIEW_TOP,
                 PREVIEW_WIDTH, PREVIEW_HEIGHT, InventorySkin.Tone.PREVIEW);
@@ -96,12 +108,6 @@ final class BackpackScreen extends InventoryScreen {
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, previewX, previewY, 30,
                 previewX - mouseX, previewY - 50 - mouseY, player);
         if (showGrid()) grid.render(graphics, mouseX, mouseY);
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float time) {
-        super.render(graphics, mouseX, mouseY, time);
-        if (showGrid()) grid.tooltip(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -147,7 +153,7 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     public void removed() {
-        ClientStorage.close(view);
+        ClientViewport.close(view);
         view = null;
         if (playerSlots != null) playerSlots.restore();
         playerSlots = null;

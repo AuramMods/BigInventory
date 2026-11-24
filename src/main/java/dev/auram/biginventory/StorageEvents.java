@@ -45,6 +45,7 @@ final class StorageEvents {
     private void clear(ServerPlayer player) {
         refills.remove(player.getUUID());
         StorageSessions.remove(player);
+        ViewportSessions.remove(player);
     }
 
     @SubscribeEvent
@@ -69,6 +70,7 @@ final class StorageEvents {
         long capacity = weight.capacity();
         updateEncumbrance(player, player.isAlive() && used > capacity);
         StorageSessions.tick(player, weight);
+        ViewportSessions.tick(player);
     }
 
     private static void updateEncumbrance(ServerPlayer player, boolean overweight) {
