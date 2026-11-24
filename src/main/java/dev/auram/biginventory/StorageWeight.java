@@ -9,16 +9,22 @@ import java.util.Map;
 
 /** A storage snapshot that can also account for proposed changes without touching the items. */
 public final class StorageWeight {
-    private final int factor = StorageConfig.FOOTPRINT_FACTOR.get();
+    private final int factor;
     private final boolean endant;
     private final Map<Variant, Long> quantities;
     private final long capacity;
     private double weight;
 
     StorageWeight(Inventory inventory, StorageEquipment equipment) {
-        endant = equipment.endant();
+        this(inventory, equipment.capacity(StorageConfig.BASE_CAPACITY.get()), StorageConfig.FOOTPRINT_FACTOR.get(),
+                equipment.endant());
+    }
+
+    StorageWeight(Inventory inventory, long capacity, int factor, boolean endant) {
+        this.endant = endant;
+        this.capacity = capacity;
+        this.factor = factor;
         quantities = endant ? new HashMap<>() : Map.of();
-        capacity = equipment.capacity(StorageConfig.BASE_CAPACITY.get());
         for (int slot = Backpack.FIRST; slot < inventory.getContainerSize(); slot++) {
             if (Backpack.isStorageSlot(slot)) {
                 ItemStack stack = inventory.getItem(slot);

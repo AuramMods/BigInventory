@@ -20,6 +20,7 @@ public final class Backpack {
 
     private final Inventory inventory;
     private final NonNullList<ItemStack> overflow;
+    private StorageNetwork.Hud predictionRules;
 
     public Backpack(Inventory inventory, NonNullList<ItemStack> overflow) {
         this.inventory = inventory;
@@ -32,6 +33,26 @@ public final class Backpack {
 
     public static boolean isStorageSlot(int slot) {
         return (slot >= FIRST && slot < LEGACY_END) || slot >= OVERFLOW_START;
+    }
+
+    public static int slotAt(int position) {
+        return position < LEGACY_END - FIRST ? FIRST + position
+                : OVERFLOW_START + position - (LEGACY_END - FIRST);
+    }
+
+    public static int positionOf(int slot) {
+        return slot < LEGACY_END ? slot - FIRST : slot - OVERFLOW_START + (LEGACY_END - FIRST);
+    }
+
+    public int size() {
+        return LEGACY_END - FIRST + overflow.size();
+    }
+
+    /** A vacant cell can be exposed before it needs a backing ItemStack. */
+    public void prepareSlot(int slot, ItemStack stack) {
+        if (slot < OVERFLOW_START || stack.isEmpty()) return;
+        int index = slot - OVERFLOW_START;
+        while (overflow.size() <= index) overflow.add(ItemStack.EMPTY);
     }
 
     public static int footprint(int factor, int stackMax) {
@@ -85,7 +106,15 @@ public final class Backpack {
     }
 
     StorageWeight weightBudget() {
+        if (predictionRules != null) {
+            return new StorageWeight(inventory, predictionRules.capacity(), predictionRules.footprintFactor(),
+                    predictionRules.endant());
+        }
         return new StorageWeight(inventory, StorageEquipment.equipped(inventory.player));
+    }
+
+    public void setPredictionRules(StorageNetwork.Hud rules) {
+        predictionRules = rules;
     }
 
     /** Inserts into a specific slot while leaving the mutable input as the remainder. */

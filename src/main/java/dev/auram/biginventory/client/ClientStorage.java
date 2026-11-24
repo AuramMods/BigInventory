@@ -40,7 +40,11 @@ public final class ClientStorage {
 
     static Hud hud() { return hud; }
 
-    public static void hud(Hud message) { hud = message; }
+    public static void hud(Hud message) {
+        hud = message;
+        var player = Minecraft.getInstance().player;
+        if (player != null) Backpack.of(player.getInventory()).setPredictionRules(message);
+    }
 
     static View open(AbstractContainerMenu menu) {
         return open(menu, null);
