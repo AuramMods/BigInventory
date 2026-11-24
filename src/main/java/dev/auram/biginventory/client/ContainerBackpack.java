@@ -4,6 +4,7 @@ import dev.auram.biginventory.Backpack;
 import dev.auram.biginventory.BigInventory;
 import dev.auram.biginventory.MenuPlayerSlots;
 import dev.auram.biginventory.mixin.ContainerLayoutAccess;
+import dev.auram.biginventory.mixin.ScreenWidgets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -38,10 +39,8 @@ public final class ContainerBackpack {
                 || screen instanceof BackpackScreen || screen instanceof BackpackChestScreen
                 || screen instanceof CreativeModeInventoryScreen) return;
         String query = active != null && active.screen() == screen ? active.grid().search().getValue() : "";
-        if (active != null) close();
-        // Mantle resolves the central panel and initializes its sub-screens during init().
-        if (screen instanceof ContainerPanelBounds) pending = new PendingPanel(screen, query);
-        else open(screen, query);
+        if (active != null) close(true);
+        pending = new PendingPanel(screen, query);
     }
 
     private static void open(AbstractContainerScreen<?> screen, String query) {
@@ -84,13 +83,19 @@ public final class ContainerBackpack {
         Component label = layout.bigInventory$inventoryTitle();
         layout.bigInventory$setInventoryTitle(Component.empty());
 
-        ClientStorage.View view = ClientStorage.open(screen.getMenu());
+        ClientViewport.View viewport = ClientViewport.open(screen.getMenu(), inventory);
+        var font = Minecraft.getInstance().font;
+        BackpackGrid grid;
+        if (viewport != null) {
+            section = section.fitNativeRows(viewport.slots.cells().size() / StorageGrid.COLUMNS);
+            grid = new RealStorageGrid(viewport, font, query);
+        } else {
+            grid = new StorageGrid(ClientStorage.open(screen.getMenu()), font, query);
+        }
         PlayerSlots slots = new PlayerSlots(screen.getMenu(), inventory);
-        // Some containers build slot backgrounds from these coordinates during their own init.
         if (aligned) slots.arrange(0, hotbarY + section.hotbarShift());
         else slots.hideBackpack();
-        StorageGrid grid = new StorageGrid(view, Minecraft.getInstance().font, query);
-        active = new Panel(screen, slots, grid, view, label, gridX, gridY, nativeHeight,
+        active = new Panel(screen, slots, grid, label, gridX, gridY, nativeHeight, layout.bigInventory$imageHeight(),
                 aligned ? hotbarY : -1, section);
     }
 
@@ -115,13 +120,30 @@ public final class ContainerBackpack {
             open(ready.screen(), ready.query());
         }
         if (active == null || active.screen() != event.getScreen()) return;
-        event.addListener(active.grid().search());
+        StorageSearchBox search = active.grid().search();
+        event.addListener(search);
+        ((ScreenWidgets) active.screen()).bigInventory$renderables().remove(search);
         active.layout();
     }
 
     @SubscribeEvent
     public static void layout(ScreenEvent.Render.Pre event) {
-        if (active != null && active.screen() == event.getScreen()) active.layout();
+        if (active == null || active.screen() != event.getScreen()) return;
+        AbstractContainerScreen<?> screen = active.screen();
+        // Some screens rebuild their native slots and widgets without firing Forge's init events.
+        if (!screen.children().contains(active.grid().search())) {
+            String query = active.grid().search().getValue();
+            boolean nativeLayoutChanged = ((ContainerLayoutAccess) screen).bigInventory$imageHeight() != active.imageHeight();
+            close(!nativeLayoutChanged);
+            open(screen, query);
+            if (active != null) {
+                var widgets = (ScreenWidgets) screen;
+                StorageSearchBox search = active.grid().search();
+                widgets.bigInventory$children().add(search);
+                widgets.bigInventory$narratables().add(search);
+            }
+        }
+        if (active != null) active.layout();
     }
 
     @SubscribeEvent
@@ -129,6 +151,22 @@ public final class ContainerBackpack {
         if (active == null || active.screen() != event.getContainerScreen()) return;
         if (active.visible()) {
             active.draw(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
+        }
+    }
+
+    @SubscribeEvent
+    public static void drawSearch(ContainerScreenEvent.Render.Foreground event) {
+        if (active == null || active.screen() != event.getContainerScreen() || !active.visible()) return;
+        var screen = active.screen();
+        var graphics = event.getGuiGraphics();
+        graphics.pose().pushPose();
+        try {
+            // Several container screens draw their own inventory label after the normal widgets.
+            graphics.pose().translate(-screen.getGuiLeft(), -screen.getGuiTop(), 0);
+            active.grid().search().render(graphics, event.getMouseX(), event.getMouseY(),
+                    Minecraft.getInstance().getFrameTime());
+        } finally {
+            graphics.pose().popPose();
         }
     }
 
@@ -177,13 +215,13 @@ public final class ContainerBackpack {
     @SubscribeEvent
     public static void closing(ScreenEvent.Closing event) {
         if (pending != null && pending.screen() == event.getScreen()) pending = null;
-        if (active != null && active.screen() == event.getScreen()) close();
+        if (active != null && active.screen() == event.getScreen()) close(true);
     }
 
-    private static void close() {
-        active.slots().restore();
+    private static void close(boolean restoreSlots) {
+        if (restoreSlots) active.slots().restore();
         ((ContainerLayoutAccess) active.screen()).bigInventory$setInventoryTitle(active.label());
-        ClientStorage.close(active.view());
+        active.grid().close();
         active = null;
     }
 
@@ -215,6 +253,11 @@ public final class ContainerBackpack {
             return new PlayerSection(Mth.clamp(NATIVE_ROWS + extra, 1, StorageGrid.MAX_ROWS), searchInset, gap);
         }
 
+        PlayerSection fitNativeRows(int limit) {
+            int fittedRows = Math.min(rows, limit);
+            return new PlayerSection(fittedRows, searchInset, fittedRows == NATIVE_ROWS && searchInset == 0 ? 0 : gap);
+        }
+
         int gridInset() {
             return searchInset + gap;
         }
@@ -228,9 +271,9 @@ public final class ContainerBackpack {
         }
     }
 
-    private record Panel(AbstractContainerScreen<?> screen, PlayerSlots slots, StorageGrid grid,
-                         ClientStorage.View view, Component label, int gridX, int nativeGridY,
-                         int nativeHeight, int nativeHotbarY, PlayerSection section) {
+    private record Panel(AbstractContainerScreen<?> screen, PlayerSlots slots, BackpackGrid grid,
+                         Component label, int gridX, int nativeGridY,
+                         int nativeHeight, int imageHeight, int nativeHotbarY, PlayerSection section) {
         boolean visible() {
             return !(screen instanceof RecipeUpdateListener recipe && recipe.getRecipeBookComponent().isVisible()
                     && screen.width < 379);
@@ -245,10 +288,8 @@ public final class ContainerBackpack {
             Rect2i panel = mainPanel();
             int x = panel.getX() + gridX;
             int y = panel.getY() + nativeGridY;
-            grid.bounds(x, y + section.gridInset(), section.rows(), section.gap());
-            boolean gridVisible = visible();
-            grid.search().visible = gridVisible;
-            if (!gridVisible) grid.cancelAnimation();
+            grid.bounds(x, y + section.gridInset(), screen.getGuiLeft(), screen.getGuiTop(),
+                    section.rows(), visible(), section.gap());
             if (!grid.search().visible && screen.getFocused() == grid.search()) screen.setFocused(null);
         }
 

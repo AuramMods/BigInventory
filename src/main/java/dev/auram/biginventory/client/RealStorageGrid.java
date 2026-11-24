@@ -22,7 +22,7 @@ import static dev.auram.biginventory.client.StorageGrid.SEARCH_HEIGHT;
 import static dev.auram.biginventory.client.StorageGrid.WIDTH;
 
 /** Draws the storage panel around native menu slots. It owns no item interactions. */
-final class RealStorageGrid {
+final class RealStorageGrid implements BackpackGrid {
     private static final int RAIL_WIDTH = 4;
     private static final int RAIL_GAP = 2;
     private static final int TICK_INTERVAL_MS = 50;
@@ -59,8 +59,14 @@ final class RealStorageGrid {
         });
     }
 
-    StorageSearchBox search() {
+    @Override
+    public StorageSearchBox search() {
         return search;
+    }
+
+    @Override
+    public void close() {
+        ClientViewport.close(view);
     }
 
     int shownRows() {
@@ -71,7 +77,8 @@ final class RealStorageGrid {
         bounds(x, y, left, top, limit, visible, SEARCH_GAP);
     }
 
-    void bounds(int x, int y, int left, int top, int limit, boolean visible, int gap) {
+    @Override
+    public void bounds(int x, int y, int left, int top, int limit, boolean visible, int gap) {
         this.x = x;
         this.y = y;
         rowLimit = Math.min(limit, view.slots.cells().size() / COLUMNS);
@@ -134,7 +141,8 @@ final class RealStorageGrid {
         return indices;
     }
 
-    void render(GuiGraphics graphics, int mouseX, int mouseY) {
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY) {
         for (int i = 0; i < drawnRows * COLUMNS; i++) {
             InventorySkin.slot(graphics, x + i % COLUMNS * CELL, y + i / COLUMNS * CELL);
         }
@@ -146,7 +154,8 @@ final class RealStorageGrid {
         view.present();
     }
 
-    boolean click(double mouseX, double mouseY, int button) {
+    @Override
+    public boolean click(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && overRail(mouseX, mouseY)) {
             int thumb = thumbHeight();
             int top = thumbTop(thumb);
@@ -158,20 +167,23 @@ final class RealStorageGrid {
         return !view.interactive() && inside(mouseX, mouseY);
     }
 
-    boolean scroll(double mouseX, double mouseY, double delta) {
+    @Override
+    public boolean scroll(double mouseX, double mouseY, double delta) {
         if (delta == 0 || maxRow() == 0 || !(inside(mouseX, mouseY) || overRail(mouseX, mouseY))) return false;
         if (!dragging) changeTarget(Mth.clamp(target - delta, 0, maxRow()));
         return true;
     }
 
-    boolean drag(double mouseY) {
+    @Override
+    public boolean drag(double mouseY) {
         if (!dragging) return false;
         int travel = gridHeight() - thumbHeight();
         changeTarget(travel <= 0 ? 0 : Mth.clamp((mouseY - y - thumbGrab) * maxRow() / travel, 0, maxRow()));
         return true;
     }
 
-    boolean release() {
+    @Override
+    public boolean release() {
         if (!dragging) return false;
         dragging = false;
         return true;

@@ -14,8 +14,8 @@ import net.minecraftforge.items.wrapper.PlayerMainInvWrapper;
 /** Resolves the actual player inventory index, independently of the menu's slot order. */
 public final class MenuPlayerSlots {
     public static int index(Slot slot, Inventory inventory) {
+        if (slot.container == inventory) return ((SlotBinding) slot).bigInventory$originalIndex();
         int index = slot.getSlotIndex();
-        if (slot.container == inventory) return index;
         if (slot instanceof SlotItemHandler wrapped) {
             var handler = wrapped.getItemHandler();
             if (handler instanceof InvWrapper container && container.getInv() == inventory

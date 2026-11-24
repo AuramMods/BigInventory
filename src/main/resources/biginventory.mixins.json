@@ -5,6 +5,6 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "biginventory.refmap.json",
   "mixins": ["InventoryMixin", "PlayerSaveMixin", "SlotMixin", "InventoryHandlerMixin", "ContainerMenuMixin", "InventoryViewportMixin", "ChestViewportMixin", "RecipePlacementMixin", "PlayerExhaustionMixin"],
-  "client": ["SlotPosition", "RecipeBookClientMixin", "CreativeCursorMixin", "EditBoxTextMixin", "FontColor", "StorageScreenPredictionMixin", "StorageClickPredictionMixin", "ContainerLayoutAccess", "ContainerLayoutMixin", "MantleContainerScreenMixin", "ExtraUtilitiesGeneratorScreenMixin", "PatchouliWordMixin"],
+  "client": ["SlotPosition", "RecipeBookClientMixin", "CreativeCursorMixin", "EditBoxTextMixin", "FontColor", "StorageScreenPredictionMixin", "StorageClickPredictionMixin", "ContainerLayoutAccess", "ContainerLayoutMixin", "ScreenWidgets", "MantleContainerScreenMixin", "ExtraUtilitiesGeneratorScreenMixin", "PatchouliWordMixin"],
   "injectors": { "defaultRequire": 1 }
 }

@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-final class StorageGrid {
+final class StorageGrid implements BackpackGrid {
     static final int CELL = 18;
     static final int COLUMNS = Inventory.getSelectionSize();
     static final int WIDTH = COLUMNS * CELL;
@@ -70,7 +70,20 @@ final class StorageGrid {
         view.grid = this;
     }
 
-    StorageSearchBox search() { return search; }
+    @Override
+    public StorageSearchBox search() { return search; }
+
+    @Override
+    public void bounds(int x, int y, int left, int top, int rows, boolean visible, int searchGap) {
+        bounds(x, y, rows, searchGap);
+        search.visible = visible;
+        if (!visible) cancelAnimation();
+    }
+
+    @Override
+    public void close() {
+        ClientStorage.close(view);
+    }
 
     void bounds(int x, int y, int rows) {
         bounds(x, y, rows, SEARCH_GAP);
@@ -88,7 +101,8 @@ final class StorageGrid {
         search.setPosition(x, y - SEARCH_HEIGHT - searchGap);
     }
 
-    void render(GuiGraphics graphics, int mouseX, int mouseY) {
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY) {
         refresh();
         updateScroll(Util.getMillis());
         int scroll = scrollPixels();
@@ -124,7 +138,8 @@ final class StorageGrid {
         }
     }
 
-    void tooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+    @Override
+    public void tooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (!view.renderedCarried().isEmpty()) return;
         Entry entry = entryAt(indexUnderMouse(mouseX, mouseY));
         if (entry == null) return;
@@ -133,7 +148,8 @@ final class StorageGrid {
         graphics.renderTooltip(font, lines, entry.icon().getTooltipImage(), entry.icon(), mouseX, mouseY);
     }
 
-    boolean click(double mouseX, double mouseY, int button) {
+    @Override
+    public boolean click(double mouseX, double mouseY, int button) {
         if (button > 1) return false;
         refresh();
         if (overRail(mouseX, mouseY)) {
@@ -195,7 +211,8 @@ final class StorageGrid {
         return index >= 0 && index < filtered.size() ? filtered.get(index) : null;
     }
 
-    boolean scroll(double mouseX, double mouseY, double delta) {
+    @Override
+    public boolean scroll(double mouseX, double mouseY, double delta) {
         refresh();
         if (delta == 0 || maxRow() == 0 || !(inside(mouseX, mouseY) || overRail(mouseX, mouseY))) return false;
         if (dragging) return true;
@@ -210,7 +227,8 @@ final class StorageGrid {
         return true;
     }
 
-    boolean drag(double mouseY) {
+    @Override
+    public boolean drag(double mouseY) {
         refresh();
         if (!dragging) return false;
         cancelAnimation();
@@ -222,7 +240,8 @@ final class StorageGrid {
         return true;
     }
 
-    boolean release() {
+    @Override
+    public boolean release() {
         if (!dragging) return false;
         dragging = false;
         targetRow = Math.round(targetRow);
