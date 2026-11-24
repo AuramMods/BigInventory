@@ -6,7 +6,9 @@ BigInventory replaces the player backpack with weight-limited storage on Minecra
 
 With Patchouli installed, craft the **Big Inventory Book** from a book, gray dye, and a chest. Right-click it to open the guide to storage controls, weight, accessories, and server settings. The book is also in the creative Tools & Utilities tab. Its gray interface is adapted from the Extra Utilities Rebirth field guide.
 
-Open the inventory and search by item name or registry ID. Left-click a matching entry to take up to one stack. Right-click to take half of that amount. Click the grid while carrying a stack to deposit it, or right-click to deposit one. In your own inventory, shift-click to move items between the hotbar and storage. With a chest or another supported container open, shift-click a storage entry to send it to the container. Scroll the grid to reach more entries.
+Each backpack slot holds one stack. Use normal clicks to pick up or place stacks, right-click to split stacks or place one item, and drag to distribute items. Press a number key over a slot to swap it with the corresponding hotbar slot. Scroll to reach more slots, or search by item name, registry ID, or mod using a query such as `@Biomes Black`.
+
+In your own inventory, shift-click to move stacks between the hotbar and backpack. In a chest or supported terminal, shift-click a backpack stack to send it to the open container. **Sort** compacts the whole backpack and groups stacks by item type. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
 
 The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
 

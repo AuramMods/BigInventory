@@ -153,7 +153,13 @@ public final class ClientViewport {
             if (requestContentVersion == contentVersion && Arrays.equals(requested, next)) return;
             requested = next;
             requestContentVersion = contentVersion;
-            ViewportNetwork.request(new PageRequest(menu.containerId, token, ++sequence, next));
+            ViewportNetwork.request(new PageRequest(menu.containerId, token, ++sequence, next, false));
+        }
+
+        void sort() {
+            if (interactive() && menu.getCarried().isEmpty()) {
+                ViewportNetwork.request(new PageRequest(menu.containerId, token, ++sequence, UNMAPPED, true));
+            }
         }
 
         boolean displays(int slot) {

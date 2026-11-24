@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -8,6 +9,9 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Predicate;
 
 /** The first 27 cells are the legacy inventory slots. Overflow follows the equipment indices. */
@@ -53,6 +57,22 @@ public final class Backpack {
         if (slot < OVERFLOW_START || stack.isEmpty()) return;
         int index = slot - OVERFLOW_START;
         while (overflow.size() <= index) overflow.add(ItemStack.EMPTY);
+    }
+
+    /** Compacts and orders storage while retaining the exact stacks, including Forge capabilities. */
+    void sort() {
+        int size = size();
+        List<ItemStack> stacks = new ArrayList<>();
+        for (int position = 0; position < size; position++) {
+            ItemStack stack = inventory.getItem(slotAt(position));
+            if (!stack.isEmpty()) stacks.add(stack);
+        }
+        stacks.sort(Comparator.comparing(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem())));
+        for (int position = 0; position < size; position++) {
+            inventory.setItem(slotAt(position), position < stacks.size() ? stacks.get(position) : ItemStack.EMPTY);
+        }
+        trimEmptyTail();
+        inventory.setChanged();
     }
 
     public static int footprint(int factor, int stackMax) {

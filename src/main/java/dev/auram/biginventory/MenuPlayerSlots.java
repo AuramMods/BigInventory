@@ -18,6 +18,9 @@ public final class MenuPlayerSlots {
         int index = slot.getSlotIndex();
         if (slot instanceof SlotItemHandler wrapped) {
             var handler = wrapped.getItemHandler();
+            if (handler instanceof BackpackItemHandler backpack && backpack.getInv() == inventory) {
+                return backpack.inventorySlot(index);
+            }
             if (handler instanceof InvWrapper container && container.getInv() == inventory
                     || handler instanceof PlayerMainInvWrapper main && main.getInventoryPlayer() == inventory
                     || handler instanceof PlayerInvWrapper

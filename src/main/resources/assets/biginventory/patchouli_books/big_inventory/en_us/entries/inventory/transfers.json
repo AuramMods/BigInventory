@@ -6,12 +6,12 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "In your own inventory, $(thing)Shift-click$() a hotbar stack to send it to storage. Shift-click a stored entry to send up to one stack back to the hotbar. With Mouse Tweaks, hold Shift and drag with the left button across several entries."
+      "text": "In your own inventory, $(thing)Shift-click$() a hotbar stack to send it to the backpack. Shift-click a backpack slot to send its stack to the hotbar. With Mouse Tweaks, hold Shift and drag with the left button across several slots."
     },
     {
       "type": "patchouli:text",
       "title": "Open Containers",
-      "text": "With a chest or another supported split inventory open, Shift-click a storage entry to send items into the open container. Storage keeps whatever the destination cannot accept. The hotbar still uses the container's normal Shift-click behavior."
+      "text": "With a chest or another supported container open, Shift-click a backpack slot to send the stack to the container. Any remainder stays in the backpack. The hotbar follows the open container's Shift-click rules."
     },
     {
       "type": "patchouli:text",

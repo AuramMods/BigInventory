@@ -120,9 +120,11 @@ public final class ContainerBackpack {
             open(ready.screen(), ready.query());
         }
         if (active == null || active.screen() != event.getScreen()) return;
-        StorageSearchBox search = active.grid().search();
-        event.addListener(search);
-        ((ScreenWidgets) active.screen()).bigInventory$renderables().remove(search);
+        var renderables = ((ScreenWidgets) active.screen()).bigInventory$renderables();
+        for (var widget : active.grid().widgets()) {
+            event.addListener(widget);
+            renderables.remove(widget);
+        }
         active.layout();
     }
 
@@ -138,9 +140,10 @@ public final class ContainerBackpack {
             open(screen, query);
             if (active != null) {
                 var widgets = (ScreenWidgets) screen;
-                StorageSearchBox search = active.grid().search();
-                widgets.bigInventory$children().add(search);
-                widgets.bigInventory$narratables().add(search);
+                for (var widget : active.grid().widgets()) {
+                    widgets.bigInventory$children().add(widget);
+                    widgets.bigInventory$narratables().add(widget);
+                }
             }
         }
         if (active != null) active.layout();
@@ -163,8 +166,9 @@ public final class ContainerBackpack {
         try {
             // Several container screens draw their own inventory label after the normal widgets.
             graphics.pose().translate(-screen.getGuiLeft(), -screen.getGuiTop(), 0);
-            active.grid().search().render(graphics, event.getMouseX(), event.getMouseY(),
-                    Minecraft.getInstance().getFrameTime());
+            for (var widget : active.grid().widgets()) {
+                widget.render(graphics, event.getMouseX(), event.getMouseY(), Minecraft.getInstance().getFrameTime());
+            }
         } finally {
             graphics.pose().popPose();
         }

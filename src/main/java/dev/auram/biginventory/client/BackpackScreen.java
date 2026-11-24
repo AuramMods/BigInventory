@@ -54,7 +54,8 @@ final class BackpackScreen extends InventoryScreen {
         playerSlots.arrange(gridLeft - 7, imageHeight - 22);
         String query = search == null ? "" : search.getValue();
         grid = new RealStorageGrid(view, font, query);
-        search = addRenderableWidget(grid.search());
+        search = grid.search();
+        for (var widget : grid.widgets()) addRenderableWidget(widget);
         layoutControls();
     }
 

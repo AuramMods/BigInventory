@@ -6,7 +6,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "A new world starts with $(thing)500 storage capacity$() by default. Storage is limited by total weight. Matching items can span many stacks, and different variants can each have an entry. Hotbar and equipment items do not use that capacity."
+      "text": "A new world starts with $(thing)500 storage capacity$() by default. The game adds up the weight of all stacks in the backpack. Hotbar and equipment have separate space."
     },
     {
       "type": "patchouli:text",

@@ -1,9 +1,16 @@
 package dev.auram.biginventory.client;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+
+import java.util.List;
 
 interface BackpackGrid {
     StorageSearchBox search();
+
+    default List<AbstractWidget> widgets() {
+        return List.of(search());
+    }
 
     void bounds(int x, int y, int left, int top, int rows, boolean visible, int searchGap);
 

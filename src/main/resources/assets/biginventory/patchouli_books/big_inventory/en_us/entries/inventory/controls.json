@@ -6,17 +6,17 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Open your inventory to see your backpack above the nine hotbar slots. Matching items share a grid entry with their total quantity. The grid is a list of items you can search and scroll through.$(br2)The hotbar, armor, offhand, equipped Curios, and crafting grid have their own space."
+      "text": "Open your inventory to see your backpack above the nine hotbar slots. Each backpack slot holds one stack. Scroll to reach more slots.$(br2)The hotbar, armor, offhand, equipped Curios, and crafting grid have their own space."
     },
     {
       "type": "patchouli:text",
       "title": "Find Items",
-      "text": "Click $(thing)Search$() to search by item name or registry ID, such as $(item)minecraft:oak_log$(). Use $(thing)@ModName$() to narrow results by mod, for example $(thing)@Biomes Black$(). Scroll or drag the scrollbar to reach more entries. At smaller GUI scales, more rows can fit on screen."
+      "text": "Click $(thing)Search$() to filter by item name or registry ID. Use $(thing)@ModName$() to filter by mod, for example $(thing)@Biomes Black$(). Click $(thing)Sort$() to group stacks by item type and close gaps across the whole backpack."
     },
     {
       "type": "patchouli:text",
       "title": "Take and Deposit",
-      "text": "$(li)$(thing)Left-click$() an entry to take up to one stack.$(li)$(thing)Right-click$() an entry to take half of that amount, rounded up.$(p)While holding a stack on the cursor, left-click the grid to deposit as much as fits. Right-click to deposit one item."
+      "text": "$(li)$(thing)Left-click$() a slot to pick up or place a stack.$(li)$(thing)Right-click$() to split a stack or place one item.$(li)$(thing)Drag$() a held stack across slots to distribute it.$(li)$(thing)Press 1–9$() over a slot to swap with the matching hotbar slot."
     },
     {
       "type": "patchouli:relations",

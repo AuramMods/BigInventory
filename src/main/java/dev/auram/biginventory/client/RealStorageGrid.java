@@ -7,7 +7,10 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
@@ -27,8 +30,11 @@ final class RealStorageGrid implements BackpackGrid {
     private static final int RAIL_GAP = 2;
     private static final int TICK_INTERVAL_MS = 50;
     private static final int SETTLE_AFTER_CLICK_MS = 300;
+    private static final int SORT_WIDTH = 27;
+    private static final int CONTROL_GAP = 2;
     private final ClientViewport.View view;
     private final StorageSearchBox search;
+    private final Button sort;
     private StorageSearchQuery query;
     private List<Integer> matches = List.of();
     private int contentVersion = -1;
@@ -47,7 +53,7 @@ final class RealStorageGrid implements BackpackGrid {
     RealStorageGrid(ClientViewport.View view, Font font, String priorSearch) {
         this.view = view;
         search = new StorageSearchBox(font);
-        search.setWidth(WIDTH);
+        search.setWidth(WIDTH - SORT_WIDTH - CONTROL_GAP);
         search.setMaxLength(96);
         search.setValue(priorSearch);
         query = StorageSearchQuery.parse(priorSearch);
@@ -57,11 +63,18 @@ final class RealStorageGrid implements BackpackGrid {
             contentVersion = -1;
             explicitChange = true;
         });
+        sort = Button.builder(Component.translatable("biginventory.sort"), button -> view.sort())
+                .size(SORT_WIDTH, SEARCH_HEIGHT).build();
     }
 
     @Override
     public StorageSearchBox search() {
         return search;
+    }
+
+    @Override
+    public List<AbstractWidget> widgets() {
+        return List.of(search, sort);
     }
 
     @Override
@@ -84,6 +97,9 @@ final class RealStorageGrid implements BackpackGrid {
         rowLimit = Math.min(limit, view.slots.cells().size() / COLUMNS);
         search.setPosition(x, y - SEARCH_HEIGHT - gap);
         search.visible = visible;
+        sort.setPosition(x + WIDTH - SORT_WIDTH, search.getY());
+        sort.visible = visible;
+        sort.active = view.interactive() && view.menu.getCarried().isEmpty();
         if (visible) {
             refresh();
             if (!mouseHeld() && (explicitChange || Util.getMillis() - view.lastClick >= SETTLE_AFTER_CLICK_MS)) {

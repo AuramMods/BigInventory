@@ -54,13 +54,15 @@ final class ViewportSessions {
         }
         if (request.sequence() <= session.sequence) return;
         session.sequence = request.sequence();
-        session.sendIndex(player, false);
         Backpack storage = Backpack.of(player.getInventory());
-        if (session.slots.validates(request.slots(), storage)) {
+        if (request.sort()) {
+            if (session.mapping.length != 0 && session.menu.getCarried().isEmpty()) storage.sort();
+        } else if (session.slots.validates(request.slots(), storage)) {
             ((MenuStorageAccess) session.menu).bigInventory$resetQuickCraft();
             session.slots.bind(request.slots());
             session.mapping = request.slots();
         }
+        session.sendIndex(player, false);
         // Both connections process these messages in order. No native click can be sent
         // from the new page until the client has received this mapping.
         StorageNetwork.send(player, new Page(session.token, session.sequence, false, session.mapping));

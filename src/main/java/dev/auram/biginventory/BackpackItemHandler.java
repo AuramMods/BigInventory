@@ -16,7 +16,7 @@ public final class BackpackItemHandler extends InvWrapper {
         this.includeEquipment = includeEquipment;
     }
 
-    private int index(int slot) {
+    int inventorySlot(int slot) {
         return includeEquipment || slot < Backpack.LEGACY_END ? slot : slot + Backpack.OVERFLOW_START - Backpack.LEGACY_END;
     }
 
@@ -31,33 +31,33 @@ public final class BackpackItemHandler extends InvWrapper {
 
     @Override
     public ItemStack getStackInSlot(int slot) {
-        return valid(slot) ? super.getStackInSlot(index(slot)) : ItemStack.EMPTY;
+        return valid(slot) ? super.getStackInSlot(inventorySlot(slot)) : ItemStack.EMPTY;
     }
 
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-        return isItemValid(slot, stack) ? super.insertItem(index(slot), stack, simulate) : stack;
+        return isItemValid(slot, stack) ? super.insertItem(inventorySlot(slot), stack, simulate) : stack;
     }
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        return valid(slot) && amount > 0 ? super.extractItem(index(slot), amount, simulate) : ItemStack.EMPTY;
+        return valid(slot) && amount > 0 ? super.extractItem(inventorySlot(slot), amount, simulate) : ItemStack.EMPTY;
     }
 
     @Override
     public void setStackInSlot(int slot, ItemStack stack) {
-        if (valid(slot)) super.setStackInSlot(index(slot), stack);
+        if (valid(slot)) super.setStackInSlot(inventorySlot(slot), stack);
     }
 
     @Override
     public int getSlotLimit(int slot) {
-        return valid(slot) ? super.getSlotLimit(index(slot)) : 0;
+        return valid(slot) ? super.getSlotLimit(inventorySlot(slot)) : 0;
     }
 
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         if (!valid(slot)) return false;
-        int index = index(slot);
+        int index = inventorySlot(slot);
         if (index >= Backpack.LEGACY_END && index < 40) {
             EquipmentSlot equipment = EquipmentSlot.byTypeAndIndex(EquipmentSlot.Type.ARMOR, index - Backpack.LEGACY_END);
             return !stack.isEmpty() && stack.canEquip(equipment, inventory.player);

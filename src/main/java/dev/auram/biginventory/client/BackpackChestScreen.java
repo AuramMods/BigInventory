@@ -38,7 +38,7 @@ final class BackpackChestScreen extends ContainerScreen {
         String query = grid != null ? grid.search().getValue() : "";
         grid = new RealStorageGrid(view, font, query);
         grid.bounds(leftPos + 7, topPos + gridTop, leftPos, topPos, rows, true);
-        addRenderableWidget(grid.search());
+        for (var widget : grid.widgets()) addRenderableWidget(widget);
     }
 
     @Override

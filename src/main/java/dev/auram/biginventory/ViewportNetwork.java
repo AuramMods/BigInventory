@@ -50,14 +50,15 @@ public final class ViewportNetwork {
         }
     }
 
-    public record PageRequest(int menu, int token, int sequence, int[] slots) {
+    public record PageRequest(int menu, int token, int sequence, int[] slots, boolean sort) {
         private void encode(FriendlyByteBuf buf) {
             buf.writeVarInt(menu).writeVarInt(token).writeVarInt(sequence).writeVarIntArray(slots);
+            buf.writeBoolean(sort);
         }
 
         private static PageRequest decode(FriendlyByteBuf buf) {
             return new PageRequest(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
-                    buf.readVarIntArray(BackpackViewport.MAX_CELLS));
+                    buf.readVarIntArray(BackpackViewport.MAX_CELLS), buf.readBoolean());
         }
     }
 
