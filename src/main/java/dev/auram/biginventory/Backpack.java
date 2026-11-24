@@ -3,6 +3,7 @@ package dev.auram.biginventory;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -15,6 +16,7 @@ public final class Backpack {
     public static final int LEGACY_END = 36;
     public static final int OVERFLOW_START = 41;
     public static final String SAVE_KEY = "biginventory:backpack";
+    private static final int SAVE_VERSION = 2;
 
     private final Inventory inventory;
     private final NonNullList<ItemStack> overflow;
@@ -281,10 +283,14 @@ public final class Backpack {
 
     public CompoundTag save() {
         CompoundTag data = new CompoundTag();
-        data.putInt("Version", 1);
+        data.putInt("Version", SAVE_VERSION);
         ListTag stacks = new ListTag();
-        for (ItemStack stack : overflow) {
-            if (!stack.isEmpty()) stacks.add(stack.save(new CompoundTag()));
+        for (int slot = 0; slot < overflow.size(); slot++) {
+            ItemStack stack = overflow.get(slot);
+            if (stack.isEmpty()) continue;
+            CompoundTag entry = stack.save(new CompoundTag());
+            entry.putInt("Slot", slot);
+            stacks.add(entry);
         }
         data.put("Overflow", stacks);
         return data;
@@ -292,10 +298,20 @@ public final class Backpack {
 
     public void load(CompoundTag data) {
         overflow.clear();
-        ListTag stacks = data.getList("Overflow", CompoundTag.TAG_COMPOUND);
+        ListTag stacks = data.getList("Overflow", Tag.TAG_COMPOUND);
+        boolean indexed = data.getInt("Version") >= SAVE_VERSION;
         for (int i = 0; i < stacks.size(); i++) {
-            ItemStack stack = ItemStack.of(stacks.getCompound(i));
-            if (!stack.isEmpty()) overflow.add(stack);
+            CompoundTag entry = stacks.getCompound(i);
+            ItemStack stack = ItemStack.of(entry);
+            if (stack.isEmpty()) continue;
+            // Version 1 already compacted its overflow. Keep that order on migration.
+            int slot = indexed && entry.contains("Slot", Tag.TAG_INT) ? entry.getInt("Slot") : overflow.size();
+            if (slot < 0 || slot >= Integer.MAX_VALUE - OVERFLOW_START
+                    || (slot < overflow.size() && !overflow.get(slot).isEmpty())) {
+                slot = overflow.size();
+            }
+            while (overflow.size() <= slot) overflow.add(ItemStack.EMPTY);
+            overflow.set(slot, stack);
         }
     }
 
