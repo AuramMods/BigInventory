@@ -104,9 +104,9 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
     @Nullable
     private static Point slotPosition(AbstractContainerScreen<?> screen, AbstractContainerMenu menu, Slot slot) {
         if (screen.getMenu() != menu) {
-            int index = menu.slots.indexOf(slot);
-            if (index < 0 || index >= screen.getMenu().slots.size()) return null;
-            slot = screen.getMenu().getSlot(index);
+            if (!(screen instanceof BackpackCreativeScreen creative)) return null;
+            slot = creative.displayedSlot(slot);
+            if (slot == null) return null;
         }
         var panel = screen instanceof ContainerPanelBounds modular ? modular.bigInventory$mainPanel() : null;
         int x = (panel == null ? screen.getGuiLeft() : panel.getX()) + slot.x + 8;

@@ -1,6 +1,8 @@
 package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.StorageNetwork.Gesture;
+import dev.auram.biginventory.mixin.CreativeInventoryAccess;
+import dev.auram.biginventory.mixin.CreativeSlotAccess;
 import dev.auram.biginventory.mixin.SlotPosition;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -70,11 +72,13 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             }
             return;
         }
-        if (firstSlot != menu.slots.get(0)) {
-            firstSlot = menu.slots.get(0);
+        Slot first = menu.slots.isEmpty() ? null : menu.slots.get(0);
+        if (firstSlot != first) {
+            firstSlot = first;
             new PlayerSlots(menu, player.getInventory()).arrange(0, HOTBAR_TOP);
-            ((SlotPosition) trashSlot()).bigInventory$setY(HOTBAR_TOP);
         }
+        Slot trash = trashSlot();
+        if (trash != null) ((SlotPosition) trash).bigInventory$setY(HOTBAR_TOP);
         if (view == null) {
             // The picker still renders its native slots and tabs. Inventory clicks use menu zero.
             player.containerMenu = player.inventoryMenu;
@@ -122,7 +126,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             if (slot.x >= 0 && slot.isActive()) InventorySkin.slot(graphics, leftPos, topPos, slot);
         }
         Slot trash = trashSlot();
-        InventorySkin.trash(graphics, leftPos + trash.x, topPos + trash.y);
+        if (trash != null) InventorySkin.trash(graphics, leftPos + trash.x, topPos + trash.y);
         InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, leftPos + 88, topPos + 45, 20,
                 leftPos + 88 - mouseX, topPos + 15 - mouseY, player);
         grid.render(graphics, mouseX, mouseY);
@@ -131,8 +135,18 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         }
     }
 
+    @Nullable
     private Slot trashSlot() {
-        return menu.getSlot(player.inventoryMenu.slots.size());
+        Slot trash = ((CreativeInventoryAccess) (CreativeModeInventoryScreen) this).bigInventory$trashSlot();
+        return trash != null && menu.slots.contains(trash) ? trash : null;
+    }
+
+    @Nullable
+    Slot displayedSlot(Slot backing) {
+        for (Slot slot : menu.slots) {
+            if (slot instanceof CreativeSlotAccess wrapper && wrapper.bigInventory$targetSlot() == backing) return slot;
+        }
+        return null;
     }
 
     @Override
@@ -149,7 +163,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             return true;
         }
         boolean handled = super.mouseClicked(x, y, button);
-        syncInventoryTab();
+        if (minecraft.screen == this) syncInventoryTab();
         return handled;
     }
 
@@ -161,7 +175,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             return true;
         }
         boolean handled = super.mouseReleased(x, y, button);
-        syncInventoryTab();
+        if (minecraft.screen == this) syncInventoryTab();
         return handled;
     }
 
@@ -201,12 +215,17 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             return;
         }
         if (view.revision == 0) return;
-        int index = slot == null ? id : menu.slots.indexOf(slot);
-        int inventorySize = player.inventoryMenu.slots.size();
-        if (slot != null && index == inventorySize) {
+        if (slot != null && slot == trashSlot()) {
             view.act(-1, click == ClickType.QUICK_MOVE ? Gesture.CREATIVE_CLEAR : Gesture.CREATIVE_TRASH);
-        } else if (slot == null || index >= 0 && index < inventorySize) {
-            minecraft.gameMode.handleInventoryMouseClick(player.inventoryMenu.containerId, index, button, click, player);
+            return;
         }
+        int index = id;
+        if (slot != null) {
+            if (!(slot instanceof CreativeSlotAccess wrapper)) return;
+            Slot target = wrapper.bigInventory$targetSlot();
+            index = target.index;
+            if (index < 0 || index >= view.menu.slots.size() || view.menu.getSlot(index) != target) return;
+        }
+        minecraft.gameMode.handleInventoryMouseClick(view.menu.containerId, index, button, click, player);
     }
 }

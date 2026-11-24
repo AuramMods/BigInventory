@@ -11,6 +11,7 @@ import dev.auram.biginventory.StorageNetwork.ViewAck;
 import dev.auram.biginventory.StorageNetwork.ViewPage;
 import dev.auram.biginventory.StorageNetwork.ViewRequest;
 import dev.auram.biginventory.StorageNetwork.ViewStart;
+import dev.auram.biginventory.mixin.CreativeSlotAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -103,9 +104,8 @@ public final class ClientStorage {
         if (visible == null) return slot.getItem();
         Slot backing = slot;
         if (visible.menu != menu) {
-            int index = menu.slots.indexOf(slot);
-            if (index < 0 || index >= visible.menu.slots.size()) return slot.getItem();
-            backing = visible.menu.getSlot(index);
+            if (!(slot instanceof CreativeSlotAccess wrapper)) return slot.getItem();
+            backing = wrapper.bigInventory$targetSlot();
         }
         ItemStack predicted = visible.predictedSlot(backing);
         ItemStack stack = predicted == null ? slot.getItem() : predicted;
