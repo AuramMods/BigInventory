@@ -208,6 +208,9 @@ public final class ClientStorage {
             acknowledgedRevision = -1;
             changes++;
             StorageNetwork.action(new Action(menu.containerId, token, revision, id, gesture));
+            // Virtual slots bypass the vanilla click that Sounds listens for.
+            var transfer = prediction.transfer();
+            if (transfer != null) SoundsCompat.playItemClick(transfer.entry().icon());
             return true;
         }
 
