@@ -1,6 +1,8 @@
 package dev.auram.biginventory.mixin;
 
 import dev.auram.biginventory.Backpack;
+import dev.auram.biginventory.MenuPlayerSlots;
+import dev.auram.biginventory.MenuStorageAccess;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -19,8 +21,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(AbstractContainerMenu.class)
-abstract class ContainerMenuMixin {
+abstract class ContainerMenuMixin implements MenuStorageAccess {
     @Shadow @Final public NonNullList<Slot> slots;
+    @Unique private Inventory bigInventory$exportingInventory;
+
+    @Override
+    public void bigInventory$runStorageExport(Inventory inventory, Runnable transfer) {
+        Inventory previous = bigInventory$exportingInventory;
+        bigInventory$exportingInventory = inventory;
+        try {
+            transfer.run();
+        } finally {
+            bigInventory$exportingInventory = previous;
+        }
+    }
+
+    @Inject(method = {"broadcastChanges", "broadcastFullState", "sendAllDataToRemote"},
+            at = @At("HEAD"), cancellable = true)
+    private void bigInventory$deferStorageExportSync(CallbackInfo ci) {
+        if (bigInventory$exportingInventory != null) ci.cancel();
+    }
 
     @Inject(method = "doClick", at = @At(value = "INVOKE", ordinal = 0,
             target = "Lnet/minecraft/world/inventory/AbstractContainerMenu;quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;"),
@@ -57,16 +77,23 @@ abstract class ContainerMenuMixin {
     @Inject(method = "moveItemStackTo", at = @At("HEAD"), cancellable = true)
     private void bigInventory$quickMove(ItemStack input, int from, int to, boolean reverse,
                                         CallbackInfoReturnable<Boolean> cir) {
+        Inventory exporting = bigInventory$exportingInventory;
         Inventory destination = null;
+        boolean filterPlayerSlots = false;
         for (int i = from; i < to; i++) {
             Slot slot = slots.get(i);
-            if (slot.container instanceof Inventory inv && !inv.player.level().isClientSide
+            if (exporting != null) {
+                if (MenuPlayerSlots.index(slot, exporting) >= 0) {
+                    filterPlayerSlots = true;
+                    break;
+                }
+            } else if (slot.container instanceof Inventory inv && !inv.player.level().isClientSide
                     && Backpack.isStorageSlot(slot.getSlotIndex())) {
                 destination = inv;
                 break;
             }
         }
-        if (destination == null) return;
+        if (destination == null && !filterPlayerSlots) return;
 
         int original = input.getCount();
         int start = reverse ? to - 1 : from;
@@ -74,13 +101,15 @@ abstract class ContainerMenuMixin {
         int step = reverse ? -1 : 1;
         for (int i = start; i != end && !input.isEmpty() && input.isStackable(); i += step) {
             Slot slot = slots.get(i);
+            if (filterPlayerSlots && MenuPlayerSlots.index(slot, exporting) >= 0) continue;
             if (slot.getItem() != input && Backpack.matches(slot.getItem(), input)) bigInventory$moveToSlot(input, slot);
         }
         for (int i = start; i != end && !input.isEmpty(); i += step) {
             Slot slot = slots.get(i);
+            if (filterPlayerSlots && MenuPlayerSlots.index(slot, exporting) >= 0) continue;
             if (slot.getItem() != input && slot.getItem().isEmpty()) bigInventory$moveToSlot(input, slot);
         }
-        if (!input.isEmpty()) {
+        if (destination != null && !input.isEmpty()) {
             boolean sourceInBackpack = false;
             for (int i = Backpack.FIRST; i < destination.getContainerSize(); i++) {
                 if (Backpack.isStorageSlot(i) && destination.getItem(i) == input) {

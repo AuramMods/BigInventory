@@ -177,6 +177,7 @@ public final class ClientStorage {
         int changes;
         StorageGrid grid;
         private StoragePrediction prediction;
+        @Nullable private Entry pendingContainerTransfer;
         private int acknowledgedRevision = -1;
         private MenuClick deferredClick;
         private final LinkedHashSet<ShiftRequest> queuedShifts = new LinkedHashSet<>();
@@ -192,6 +193,9 @@ public final class ClientStorage {
             if (player == null) return false;
             try {
                 prediction = StoragePrediction.preview(entries, gesture, id, menu, player.getInventory(), hud);
+                if (gesture == Gesture.SHIFT_TAKE && !(menu instanceof InventoryMenu)) {
+                    pendingContainerTransfer = entries.get(id);
+                }
             } catch (RuntimeException failure) {
                 // Some modded slots only support transfer queries on the server.
                 LOGGER.debug("Cannot preview storage action {} in {}", gesture, menu.getClass().getName(), failure);
@@ -295,6 +299,12 @@ public final class ClientStorage {
         private void reconcilePrediction() {
             if (prediction != null && acknowledgedRevision >= 0 && revision >= acknowledgedRevision) {
                 if (animation() != null) reconcileAnimation();
+                Entry before = pendingContainerTransfer;
+                pendingContainerTransfer = null;
+                if (before != null && acknowledgedRevision != 0) {
+                    Entry after = findEntry(before.icon());
+                    if (after == null || after.count() < before.count()) SoundsCompat.playItemClick(before.icon());
+                }
                 prediction = null;
                 changes++;
             }
@@ -306,14 +316,18 @@ public final class ClientStorage {
                 grid.cancelAnimation();
                 return;
             }
-            var key = Backpack.variantKey(transfer.entry().icon());
-            Entry received = entries.stream()
-                    .filter(entry -> entry.icon().is(transfer.entry().icon().getItem())
-                            && Backpack.variantKey(entry.icon()).equals(key))
-                    .findFirst().orElse(null);
+            Entry received = findEntry(transfer.entry().icon());
             long count = received == null ? 0 : received.count();
             if (count != transfer.expectedCount()) grid.cancelAnimation();
             else if (transfer.delta() > 0 && received != null) grid.retargetDeposit(received, entries);
+        }
+
+        @Nullable
+        private Entry findEntry(ItemStack pattern) {
+            var key = Backpack.variantKey(pattern);
+            return entries.stream()
+                    .filter(entry -> entry.icon().is(pattern.getItem()) && Backpack.variantKey(entry.icon()).equals(key))
+                    .findFirst().orElse(null);
         }
 
         void applyCompleteView() {

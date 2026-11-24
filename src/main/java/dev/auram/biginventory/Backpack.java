@@ -99,8 +99,17 @@ public final class Backpack {
         if (input.isEmpty() || requested <= 0) return 0;
         int fit = weightBudget().fit(input, Math.min(requested, input.getCount()));
         if (fit == 0) return 0;
+        store(input, fit);
+        return fit;
+    }
 
-        int remaining = fit;
+    /** Return the unused portion of an already-withdrawn stack, including while over capacity. */
+    void returnTransferRemainder(ItemStack remainder) {
+        if (!remainder.isEmpty()) store(remainder, remainder.getCount());
+    }
+
+    private void store(ItemStack input, int count) {
+        int remaining = count;
         int size = inventory.getContainerSize();
         for (int slot = FIRST; slot < size && remaining > 0; slot++) {
             if (isStorageSlot(slot)) {
@@ -121,7 +130,6 @@ public final class Backpack {
             remaining -= stack.getCount();
         }
         inventory.setChanged();
-        return fit;
     }
 
     public void storeHotbarStack(Slot slot) {

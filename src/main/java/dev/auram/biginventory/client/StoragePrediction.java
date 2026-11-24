@@ -74,9 +74,10 @@ record StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor, Map<Sl
         int moved = gesture == Gesture.TAKE_HALF ? (available + 1) / 2 : available;
         Map<Slot, ItemStack> slots = Map.of();
         if (gesture == Gesture.SHIFT_TAKE) {
+            // A terminal's quick-move handler can deposit into storage that the client cannot inspect.
+            if (!(menu instanceof InventoryMenu)) return new StoragePrediction(entries, null);
             ItemStack proposal = entry.icon().copyWithCount(available);
-            slots = menu instanceof InventoryMenu ? StorageTransfers.previewToHotbar(inventory, menu, proposal)
-                    : StorageTransfers.previewToContainer(inventory, menu, proposal);
+            slots = StorageTransfers.previewToHotbar(inventory, menu, proposal);
             moved -= proposal.getCount();
         }
         if (moved == 0) return new StoragePrediction(entries, null);

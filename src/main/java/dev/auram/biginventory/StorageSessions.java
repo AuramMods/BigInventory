@@ -132,11 +132,7 @@ final class StorageSessions {
                 if (menu instanceof InventoryMenu) {
                     store.putInHotbar(store.take(pattern, Math.min(offered, store.hotbarRoom(pattern))));
                 } else {
-                    int available = available(inventory, pattern, offered);
-                    if (available == 0) return;
-                    ItemStack proposal = pattern.copyWithCount(available);
-                    StorageTransfers.moveToContainer(inventory, menu, proposal);
-                    store.take(pattern, available - proposal.getCount());
+                    StorageTransfers.moveToContainer(inventory, menu, store, pattern, offered);
                 }
             }
             case TAKE_HALF -> menu.setCarried(store.take(pattern, (available(inventory, pattern, offered) + 1) / 2));
