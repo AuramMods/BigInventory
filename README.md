@@ -10,6 +10,8 @@ Each backpack slot holds one stack. Use normal clicks to pick up or place stacks
 
 In your own inventory, shift-click to move stacks between the hotbar and backpack. In a chest or supported terminal, shift-click a backpack stack to send it to the open container. **Sort** compacts the whole backpack and groups stacks by item type. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
 
+The creative inventory tab and supported menus with custom player slots show grouped backpack entries.
+
 The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
 
 Server-side capacity defaults to 500. With the default footprint factor of 32, a cobblestone takes one unit, an empty bucket takes two, and an unstackable tool takes 32. If equipment changes put you over capacity, you keep your items and can withdraw them. Deposits resume when there is room. Movement slows by half and Mining Fatigue I applies while overloaded.

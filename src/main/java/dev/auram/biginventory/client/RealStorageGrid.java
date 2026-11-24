@@ -13,6 +13,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Arrays;
@@ -30,9 +31,11 @@ final class RealStorageGrid implements BackpackGrid {
     private static final int RAIL_GAP = 2;
     private static final int TICK_INTERVAL_MS = 50;
     private static final int SETTLE_AFTER_CLICK_MS = 300;
+    private static final int SCROLL_ANIMATION_MS = 125;
     private static final int SORT_WIDTH = 27;
     private static final int CONTROL_GAP = 2;
     private final ClientViewport.View view;
+    private final Font font;
     private final StorageSearchBox search;
     private final Button sort;
     private StorageSearchQuery query;
@@ -48,10 +51,15 @@ final class RealStorageGrid implements BackpackGrid {
     private long lastTick;
     private boolean dragging;
     private boolean explicitChange = true;
+    private boolean scrollChange;
     private int thumbGrab;
+    private Slide pendingSlide;
+    private Slide activeSlide;
+    private long slideStart;
 
     RealStorageGrid(ClientViewport.View view, Font font, String priorSearch) {
         this.view = view;
+        this.font = font;
         search = new StorageSearchBox(font);
         search.setWidth(WIDTH - SORT_WIDTH - CONTROL_GAP);
         search.setMaxLength(96);
@@ -62,6 +70,7 @@ final class RealStorageGrid implements BackpackGrid {
             target = 0;
             contentVersion = -1;
             explicitChange = true;
+            scrollChange = false;
         });
         sort = Button.builder(Component.translatable("biginventory.sort"), button -> view.sort())
                 .size(SORT_WIDTH, SEARCH_HEIGHT).build();
@@ -102,18 +111,50 @@ final class RealStorageGrid implements BackpackGrid {
         sort.active = view.interactive() && view.menu.getCarried().isEmpty();
         if (visible) {
             refresh();
-            if (!mouseHeld() && (explicitChange || Util.getMillis() - view.lastClick >= SETTLE_AFTER_CLICK_MS)) {
+            long now = Util.getMillis();
+            updateSlide(now);
+            if (activeSlide == null && !mouseHeld()
+                    && (explicitChange || now - view.lastClick >= SETTLE_AFTER_CLICK_MS)) {
                 drawnRows = rows;
-                view.request(mapping());
+                int[] next = mapping();
+                Slide outgoing = scrollChange && !dragging ? departingRow(next) : null;
+                if (view.request(next)) pendingSlide = outgoing;
                 explicitChange = false;
+                scrollChange = false;
             }
         }
         for (int i = 0; i < view.slots.cells().size(); i++) {
             SlotPosition position = (SlotPosition) view.slots.cells().get(i);
-            position.bigInventory$setX(visible && i < drawnRows * COLUMNS ? x - left + 1 + i % COLUMNS * CELL : -30000);
+            position.bigInventory$setX(visible && activeSlide == null && i < drawnRows * COLUMNS
+                    ? x - left + 1 + i % COLUMNS * CELL : -30000);
             position.bigInventory$setY(y - top + 1 + i / COLUMNS * CELL);
         }
     }
+
+    private Slide departingRow(int[] next) {
+        if (!view.interactive() || !query.isEmpty() || view.mapping[0] < 0) return null;
+        int difference = Backpack.positionOf(next[0]) - Backpack.positionOf(view.mapping[0]);
+        if (Math.abs(difference) != COLUMNS) return null;
+        int direction = difference / COLUMNS;
+        int first = direction > 0 ? 0 : (drawnRows - 1) * COLUMNS;
+        if (view.mapping[first] < 0) return null;
+        ItemStack[] items = new ItemStack[COLUMNS];
+        for (int i = 0; i < items.length; i++) items[i] = view.slots.cells().get(first + i).getItem().copy();
+        return new Slide(next[0], direction, items);
+    }
+
+    private void updateSlide(long now) {
+        if (pendingSlide != null && view.sequence == view.applied) {
+            if (view.mapping.length != 0 && view.mapping[0] == pendingSlide.destination()) {
+                activeSlide = pendingSlide;
+                slideStart = now;
+            }
+            pendingSlide = null;
+        }
+        if (activeSlide != null && now - slideStart >= SCROLL_ANIMATION_MS) activeSlide = null;
+    }
+
+    private record Slide(int destination, int direction, ItemStack[] departing) {}
 
     private void refresh() {
         if (contentVersion != view.contentVersion) {
@@ -159,15 +200,45 @@ final class RealStorageGrid implements BackpackGrid {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY) {
-        for (int i = 0; i < drawnRows * COLUMNS; i++) {
-            InventorySkin.slot(graphics, x + i % COLUMNS * CELL, y + i / COLUMNS * CELL);
+        if (activeSlide != null) {
+            drawSlide(graphics);
+        } else {
+            for (int i = 0; i < drawnRows * COLUMNS; i++) {
+                InventorySkin.slot(graphics, x + i % COLUMNS * CELL, y + i / COLUMNS * CELL);
+            }
+            view.present();
         }
         if (maxRow() > 0) {
             int thumb = thumbHeight();
             InventorySkin.scrollbar(graphics, railX(), y, RAIL_WIDTH, gridHeight(), thumbTop(thumb), thumb,
                     dragging || overRail(mouseX, mouseY));
         }
-        view.present();
+    }
+
+    private void drawSlide(GuiGraphics graphics) {
+        double remaining = Mth.clamp(1 - (Util.getMillis() - slideStart) / (double) SCROLL_ANIMATION_MS, 0, 1);
+        int offset = activeSlide.direction() * (int) Math.round(CELL * remaining * remaining);
+        int outgoingY = y + offset + (activeSlide.direction() > 0 ? -CELL : gridHeight());
+        graphics.enableScissor(x, y, x + WIDTH, y + gridHeight());
+        try {
+            for (int i = 0; i < COLUMNS; i++) {
+                drawMovingSlot(graphics, x + i * CELL, outgoingY, activeSlide.departing()[i]);
+            }
+            for (int i = 0; i < drawnRows * COLUMNS; i++) {
+                drawMovingSlot(graphics, x + i % COLUMNS * CELL, y + i / COLUMNS * CELL + offset,
+                        view.slots.cells().get(i).getItem());
+            }
+        } finally {
+            graphics.disableScissor();
+        }
+    }
+
+    private void drawMovingSlot(GuiGraphics graphics, int x, int y, ItemStack stack) {
+        InventorySkin.slot(graphics, x, y);
+        if (!stack.isEmpty()) {
+            graphics.renderItem(stack, x + 1, y + 1);
+            graphics.renderItemDecorations(font, stack, x + 1, y + 1);
+        }
     }
 
     @Override
@@ -209,6 +280,7 @@ final class RealStorageGrid implements BackpackGrid {
         long now = Util.getMillis();
         if (Math.round(next) != Math.round(target)) {
             explicitChange = true;
+            scrollChange = true;
             if (now - lastTick >= TICK_INTERVAL_MS) {
                 lastTick = now;
                 Minecraft.getInstance().getSoundManager()

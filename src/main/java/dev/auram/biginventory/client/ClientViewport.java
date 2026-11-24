@@ -148,12 +148,13 @@ public final class ClientViewport {
             if (ready()) presented = applied;
         }
 
-        void request(int[] next) {
-            if (!receivedIndex || closed || sequence != applied || Arrays.equals(mapping, next)) return;
-            if (requestContentVersion == contentVersion && Arrays.equals(requested, next)) return;
+        boolean request(int[] next) {
+            if (!receivedIndex || closed || sequence != applied || Arrays.equals(mapping, next)) return false;
+            if (requestContentVersion == contentVersion && Arrays.equals(requested, next)) return false;
             requested = next;
             requestContentVersion = contentVersion;
             ViewportNetwork.request(new PageRequest(menu.containerId, token, ++sequence, next, false));
+            return true;
         }
 
         void sort() {

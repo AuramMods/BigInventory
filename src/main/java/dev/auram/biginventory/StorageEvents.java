@@ -34,7 +34,10 @@ final class StorageEvents {
 
     @SubscribeEvent
     public void loggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) clear(player);
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ((MenuStorageAccess) player.containerMenu).bigInventory$recoverCursor(player, true);
+            clear(player);
+        }
     }
 
     @SubscribeEvent

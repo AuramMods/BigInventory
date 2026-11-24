@@ -6,6 +6,7 @@ import dev.auram.biginventory.MenuPlayerSlots;
 import dev.auram.biginventory.MenuStorageAccess;
 import dev.auram.biginventory.SlotBinding;
 import net.minecraft.core.NonNullList;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,7 +31,14 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
     @Shadow protected abstract Slot addSlot(Slot slot);
     @Shadow protected abstract void resetQuickCraft();
     @Shadow protected abstract boolean moveItemStackTo(ItemStack stack, int from, int to, boolean reverse);
+    @Shadow public abstract ItemStack getCarried();
+    @Shadow public abstract boolean canTakeItemForPickAll(ItemStack stack, Slot slot);
+    @Shadow private int quickcraftStatus;
     @Unique private Inventory bigInventory$exportingInventory;
+    @Unique private ItemStack bigInventory$borrowedCursor = ItemStack.EMPTY;
+    @Unique private ItemStack bigInventory$pickupCandidate = ItemStack.EMPTY;
+    @Unique private int bigInventory$beforeClickCount;
+    @Unique private long bigInventory$beforeCollect = -1;
 
     @Override
     public void bigInventory$reserveViewportSlots(Inventory inventory) {
@@ -44,6 +52,61 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
     @Override
     public void bigInventory$resetQuickCraft() {
         resetQuickCraft();
+    }
+
+    @Inject(method = "clicked", at = @At("HEAD"))
+    private void bigInventory$startCursorClick(int index, int button, ClickType type, Player player, CallbackInfo ci) {
+        if (!(player instanceof ServerPlayer)) return;
+        ItemStack carried = getCarried();
+        bigInventory$beforeClickCount = carried.getCount();
+        bigInventory$pickupCandidate = ItemStack.EMPTY;
+        bigInventory$beforeCollect = -1;
+        if (quickcraftStatus != 0 || index < 0 || index >= slots.size()) return;
+        Slot slot = slots.get(index);
+        if (!BackpackViewport.isBound(slot) || slot.container != player.getInventory()) return;
+        if (type == ClickType.PICKUP && slot.hasItem() && !Backpack.matches(slot.getItem(), carried)) {
+            bigInventory$pickupCandidate = slot.getItem().copy();
+        } else if (type == ClickType.PICKUP_ALL && !carried.isEmpty()
+                && (!slot.hasItem() || !slot.mayPickup(player)) && canTakeItemForPickAll(carried, slot)) {
+            bigInventory$beforeCollect = Backpack.of(player.getInventory()).countStored(carried);
+        }
+    }
+
+    @Inject(method = "clicked", at = @At("RETURN"))
+    private void bigInventory$finishCursorClick(int index, int button, ClickType type, Player player, CallbackInfo ci) {
+        if (!(player instanceof ServerPlayer)) return;
+        ItemStack carried = getCarried();
+        int borrowed = Backpack.matches(carried, bigInventory$borrowedCursor)
+                ? bigInventory$borrowedCursor.getCount() - Math.max(0, bigInventory$beforeClickCount - carried.getCount()) : 0;
+        if (Backpack.matches(carried, bigInventory$pickupCandidate)) {
+            ItemStack left = slots.get(index).getItem();
+            int remaining = Backpack.matches(carried, left) ? left.getCount() : 0;
+            borrowed = bigInventory$pickupCandidate.getCount() - remaining;
+        }
+        if (bigInventory$beforeCollect >= 0 && !carried.isEmpty()) {
+            Backpack backpack = Backpack.of(player.getInventory());
+            ItemStack extra = backpack.take(carried, carried.getMaxStackSize() - carried.getCount());
+            carried.grow(extra.getCount());
+            long withdrawn = bigInventory$beforeCollect - backpack.countStored(carried);
+            borrowed += (int) Math.max(0, Math.min(withdrawn, carried.getCount() - bigInventory$beforeClickCount));
+        }
+        borrowed = Math.min(borrowed, carried.getCount());
+        bigInventory$borrowedCursor = borrowed > 0 ? carried.copyWithCount(borrowed) : ItemStack.EMPTY;
+        bigInventory$pickupCandidate = ItemStack.EMPTY;
+    }
+
+    @Inject(method = "removed", at = @At("HEAD"))
+    private void bigInventory$returnCursorOnClose(Player player, CallbackInfo ci) {
+        if (player instanceof ServerPlayer serverPlayer) bigInventory$recoverCursor(serverPlayer, false);
+    }
+
+    @Override
+    public void bigInventory$recoverCursor(ServerPlayer player, boolean disconnecting) {
+        ItemStack carried = getCarried();
+        if (player.isAlive() && Backpack.matches(carried, bigInventory$borrowedCursor)) {
+            Backpack.of(player.getInventory()).recoverCursor(carried, bigInventory$borrowedCursor.getCount(), disconnecting);
+        }
+        bigInventory$borrowedCursor = ItemStack.EMPTY;
     }
 
     @Override

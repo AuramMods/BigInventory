@@ -159,6 +159,17 @@ public final class Backpack {
         if (!remainder.isEmpty()) store(remainder, remainder.getCount());
     }
 
+    /** Restore items picked up from this backpack when regular cursor return cannot place them. */
+    public void recoverCursor(ItemStack carried, int borrowed, boolean disconnecting) {
+        int recover = borrowed;
+        if (!disconnecting) {
+            int afterHotbar = Math.max(0, carried.getCount() - hotbarRoom(carried));
+            int cannotFit = afterHotbar - weightBudget().fit(carried, afterHotbar);
+            recover = Math.min(recover, cannotFit);
+        }
+        if (recover > 0) returnTransferRemainder(carried.split(recover));
+    }
+
     private void store(ItemStack input, int count) {
         int remaining = count;
         int size = inventory.getContainerSize();
@@ -285,8 +296,16 @@ public final class Backpack {
     }
 
     public long count(ItemStack pattern) {
+        return count(pattern, 0);
+    }
+
+    public long countStored(ItemStack pattern) {
+        return count(pattern, FIRST);
+    }
+
+    private long count(ItemStack pattern, int start) {
         long count = 0;
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+        for (int slot = start; slot < inventory.getContainerSize(); slot++) {
             if (slot < FIRST || isStorageSlot(slot)) {
                 ItemStack stack = inventory.getItem(slot);
                 if (matches(stack, pattern)) count += stack.getCount();
