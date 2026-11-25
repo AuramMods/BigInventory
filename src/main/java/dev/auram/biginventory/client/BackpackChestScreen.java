@@ -28,7 +28,7 @@ final class BackpackChestScreen extends ContainerScreen {
     @Override
     protected void init() {
         rows = Mth.clamp((height - gridTop - FOOTER - 4) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
-        imageHeight = gridTop + StorageGrid.CELL + FOOTER;
+        imageHeight = gridTop + rows * StorageGrid.CELL + FOOTER;
         inventoryLabelY = -30000;
         super.init();
         if (view == null) view = ClientViewport.open(menu, inventory);
@@ -45,13 +45,6 @@ final class BackpackChestScreen extends ContainerScreen {
     public void render(GuiGraphics graphics, int x, int y, float time) {
         if (grid != null) {
             grid.bounds(leftPos + 7, topPos + gridTop, leftPos, topPos, rows, true);
-            int preferredHeight = gridTop + grid.shownRows() * StorageGrid.CELL + FOOTER;
-            if (preferredHeight != imageHeight && menu.getCarried().isEmpty()) {
-                imageHeight = preferredHeight;
-                topPos = (height - imageHeight) / 2;
-                playerSlots.arrange(0, imageHeight - 24);
-                grid.bounds(leftPos + 7, topPos + gridTop, leftPos, topPos, rows, true);
-            }
         }
         super.render(graphics, x, y, time);
     }

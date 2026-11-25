@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,20 +31,24 @@ public final class ClientViewport {
     private static int tokens;
 
     static View open(AbstractContainerMenu menu, Inventory inventory) {
+        return open(menu, inventory, null);
+    }
+
+    static View open(AbstractContainerMenu menu, Inventory inventory, @Nullable ItemStack creativeCursor) {
         BackpackViewport viewport = BackpackViewport.find(menu, inventory);
         if (viewport == null) return null;
         close(active);
         View view = new View(menu, inventory, viewport, ++tokens);
         active = view;
         VIEWS.put(view.token, view);
-        ViewportNetwork.request(new Access(menu.containerId, view.token, true));
+        ViewportNetwork.request(new Access(menu.containerId, view.token, true, creativeCursor));
         return view;
     }
 
     static void close(View view) {
         if (view == null || active != view) return;
         active = null;
-        if (!view.closed) ViewportNetwork.request(new Access(view.menu.containerId, view.token, false));
+        if (!view.closed) ViewportNetwork.request(new Access(view.menu.containerId, view.token, false, null));
     }
 
     static void reset() {
@@ -57,6 +62,25 @@ public final class ClientViewport {
         if (!active.interactive()) return true;
         active.lastClick = Util.getMillis();
         return false;
+    }
+
+    static boolean sortAt(AbstractContainerScreen<?> screen, double mouseX, double mouseY) {
+        View view = active;
+        if (view == null || !represents(screen, view) || !view.menu.getCarried().isEmpty()) return false;
+        double x = mouseX - screen.getGuiLeft();
+        double y = mouseY - screen.getGuiTop();
+        for (var slot : view.slots.cells()) {
+            if (slot.isActive() && x >= slot.x - 1 && x < slot.x + 17 && y >= slot.y - 1 && y < slot.y + 17) {
+                view.sort();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean represents(AbstractContainerScreen<?> screen, View view) {
+        return screen.getMenu() == view.menu
+                || screen instanceof BackpackCreativeScreen creative && creative.displays(view);
     }
 
     public static void index(Index message) {
@@ -95,7 +119,7 @@ public final class ClientViewport {
             view.slots.reset();
         }
         ((MenuStorageAccess) view.menu).bigInventory$resetQuickCraft();
-        if (Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen && screen.getMenu() == view.menu) {
+        if (Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen && represents(screen, view)) {
             ((ViewportScreen) screen).bigInventory$resetPageGesture();
         }
         int[] previous = view.mapping;

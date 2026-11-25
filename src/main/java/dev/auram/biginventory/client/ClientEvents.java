@@ -2,12 +2,15 @@ package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.BigInventory;
 import dev.auram.biginventory.StorageNetwork.Hud;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
@@ -24,6 +27,7 @@ import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.common.ToolActions;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -64,6 +68,21 @@ public final class ClientEvents {
     public static void playerChanged(ClientPlayerNetworkEvent.Clone event) {
         sweepingScreen = null;
         ClientStorage.reset();
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void sortBackpack(ScreenEvent.MouseButtonPressed.Pre event) {
+        if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
+                && event.getScreen() instanceof AbstractContainerScreen<?> screen
+                && ClientViewport.sortAt(screen, event.getMouseX(), event.getMouseY())) event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public static void fullStackCount(ItemTooltipEvent event) {
+        int count = event.getItemStack().getCount();
+        if (count >= 1_000) {
+            event.getToolTip().add(Component.translatable("biginventory.stack_count", count).withStyle(ChatFormatting.GRAY));
+        }
     }
 
     // Mouse Tweaks reads its settings on the native press event before we claim a storage sweep.

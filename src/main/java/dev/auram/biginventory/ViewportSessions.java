@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.ViewportNetwork.Access;
+import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
 import dev.auram.biginventory.ViewportNetwork.PageRequest;
@@ -8,6 +9,7 @@ import dev.auram.biginventory.ViewportNetwork.Update;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -29,7 +31,10 @@ final class ViewportSessions {
         }
 
         AbstractContainerMenu menu = player.containerMenu;
-        if (menu.containerId != request.menu() || !valid(player, menu)) {
+        ItemStack cursor = request.creativeCursor();
+        boolean creative = cursor != null;
+        if (menu.containerId != request.menu() || !valid(player, menu)
+                || (creative && (!player.isCreative() || menu != player.inventoryMenu))) {
             StorageNetwork.send(player, new Page(request.token(), 0, true, UNMAPPED));
             return;
         }
@@ -39,9 +44,29 @@ final class ViewportSessions {
             return;
         }
         if (previous != null) close(player, previous);
-        Session session = new Session(menu, slots, request.token());
+        if (creative && menu.getCarried().isEmpty() && !cursor.isEmpty()
+                && cursor.getCount() <= Backpack.stackLimit(cursor) && cursor.isItemEnabled(player.level().enabledFeatures())) {
+            menu.setCarried(cursor);
+        }
+        Session session = new Session(menu, slots, request.token(), creative);
         SESSIONS.put(player, session);
         session.sendIndex(player, true);
+    }
+
+    static void trash(ServerPlayer player, CreativeTrash request) {
+        if (player == null || !player.isCreative()) return;
+        Session session = SESSIONS.get(player);
+        if (session == null || !session.creative || session.token != request.token() || !valid(player, session.menu)) return;
+        if (request.clear()) {
+            player.getInventory().clearContent();
+            for (Slot slot : session.menu.slots) {
+                if (slot.container != player.getInventory()) slot.setByPlayer(ItemStack.EMPTY);
+            }
+        } else {
+            session.menu.setCarried(ItemStack.EMPTY);
+        }
+        session.menu.broadcastChanges();
+        session.sendIndex(player, false);
     }
 
     static void page(ServerPlayer player, PageRequest request) {
@@ -88,26 +113,32 @@ final class ViewportSessions {
 
     private static void close(ServerPlayer player, Session session) {
         SESSIONS.remove(player);
+        if (session.creative && player.containerMenu == session.menu && player.isAlive()) session.menu.removed(player);
         session.sendIndex(player, false);
         session.slots.reset();
         ((MenuStorageAccess) session.menu).bigInventory$resetQuickCraft();
         StorageNetwork.send(player, new Page(session.token, session.sequence, true, UNMAPPED));
-        if (player.containerMenu == session.menu) session.menu.broadcastFullState();
+        if (player.containerMenu == session.menu) {
+            if (session.creative) session.menu.broadcastChanges();
+            else session.menu.broadcastFullState();
+        }
     }
 
     private static final class Session {
         final AbstractContainerMenu menu;
         final BackpackViewport slots;
         final int token;
+        final boolean creative;
         final Map<Integer, ItemStack> sent = new HashMap<>();
         int size;
         int sequence;
         int[] mapping = UNMAPPED;
 
-        Session(AbstractContainerMenu menu, BackpackViewport slots, int token) {
+        Session(AbstractContainerMenu menu, BackpackViewport slots, int token, boolean creative) {
             this.menu = menu;
             this.slots = slots;
             this.token = token;
+            this.creative = creative;
         }
 
         void sendIndex(ServerPlayer player, boolean initial) {

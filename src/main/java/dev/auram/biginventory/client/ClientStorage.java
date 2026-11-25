@@ -48,19 +48,15 @@ public final class ClientStorage {
     }
 
     static View open(AbstractContainerMenu menu) {
-        return open(menu, null);
-    }
-
-    static View open(AbstractContainerMenu menu, @Nullable ItemStack creativeCursor) {
         if (view != null) close(view);
         view = new View(menu, ++tokens);
-        StorageNetwork.request(new ViewRequest(menu.containerId, view.token, true, creativeCursor));
+        StorageNetwork.request(new ViewRequest(menu.containerId, view.token, true));
         return view;
     }
 
     static void close(View closing) {
         if (closing != null && view == closing) {
-            StorageNetwork.request(new ViewRequest(view.menu.containerId, view.token, false, null));
+            StorageNetwork.request(new ViewRequest(view.menu.containerId, view.token, false));
             view = null;
         }
     }

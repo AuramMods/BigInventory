@@ -43,9 +43,7 @@ final class RealStorageGrid implements BackpackGrid {
     private int contentVersion = -1;
     private int x;
     private int y;
-    private int rowLimit;
     private int rows = 1;
-    private int drawnRows = 1;
     private int totalRows;
     private double target;
     private long lastTick;
@@ -91,10 +89,6 @@ final class RealStorageGrid implements BackpackGrid {
         ClientViewport.close(view);
     }
 
-    int shownRows() {
-        return drawnRows;
-    }
-
     void bounds(int x, int y, int left, int top, int limit, boolean visible) {
         bounds(x, y, left, top, limit, visible, SEARCH_GAP);
     }
@@ -103,7 +97,7 @@ final class RealStorageGrid implements BackpackGrid {
     public void bounds(int x, int y, int left, int top, int limit, boolean visible, int gap) {
         this.x = x;
         this.y = y;
-        rowLimit = Math.min(limit, view.slots.cells().size() / COLUMNS);
+        rows = Math.min(limit, view.slots.cells().size() / COLUMNS);
         search.setPosition(x, y - SEARCH_HEIGHT - gap);
         search.visible = visible;
         sort.setPosition(x + WIDTH - SORT_WIDTH, search.getY());
@@ -115,7 +109,6 @@ final class RealStorageGrid implements BackpackGrid {
             updateSlide(now);
             if (activeSlide == null && !mouseHeld()
                     && (explicitChange || now - view.lastClick >= SETTLE_AFTER_CLICK_MS)) {
-                drawnRows = rows;
                 int[] next = mapping();
                 Slide outgoing = scrollChange && !dragging ? departingRow(next) : null;
                 if (view.request(next)) pendingSlide = outgoing;
@@ -125,7 +118,7 @@ final class RealStorageGrid implements BackpackGrid {
         }
         for (int i = 0; i < view.slots.cells().size(); i++) {
             SlotPosition position = (SlotPosition) view.slots.cells().get(i);
-            position.bigInventory$setX(visible && activeSlide == null && i < drawnRows * COLUMNS
+            position.bigInventory$setX(visible && activeSlide == null && i < rows * COLUMNS
                     ? x - left + 1 + i % COLUMNS * CELL : -30000);
             position.bigInventory$setY(y - top + 1 + i / COLUMNS * CELL);
         }
@@ -136,7 +129,7 @@ final class RealStorageGrid implements BackpackGrid {
         int difference = Backpack.positionOf(next[0]) - Backpack.positionOf(view.mapping[0]);
         if (Math.abs(difference) != COLUMNS) return null;
         int direction = difference / COLUMNS;
-        int first = direction > 0 ? 0 : (drawnRows - 1) * COLUMNS;
+        int first = direction > 0 ? 0 : (rows - 1) * COLUMNS;
         if (view.mapping[first] < 0) return null;
         ItemStack[] items = new ItemStack[COLUMNS];
         for (int i = 0; i < items.length; i++) items[i] = view.slots.cells().get(first + i).getItem().copy();
@@ -164,21 +157,14 @@ final class RealStorageGrid implements BackpackGrid {
                         .map(java.util.Map.Entry::getKey).toList();
             }
         }
-        int count = query.isEmpty() ? unfilteredCells() : matches.size() + 1;
-        totalRows = Math.max(1, (count + COLUMNS - 1) / COLUMNS);
-        rows = Math.min(totalRows, rowLimit);
+        int count = query.isEmpty() ? unfilteredCells() : matches.size();
+        totalRows = (count + COLUMNS - 1) / COLUMNS;
         target = Mth.clamp(target, 0, maxRow());
         if (maxRow() == 0) dragging = false;
     }
 
     private int unfilteredCells() {
-        if (view.contents.isEmpty()) return 1;
-        int last = Backpack.positionOf(view.contents.lastKey());
-        int rowStart = last / COLUMNS * COLUMNS;
-        for (int i = rowStart; i < rowStart + COLUMNS; i++) {
-            if (!view.contents.containsKey(Backpack.slotAt(i))) return last + 1;
-        }
-        return last + 2;
+        return view.contents.isEmpty() ? 0 : Backpack.positionOf(view.contents.lastKey()) + 1;
     }
 
     private int[] mapping() {
@@ -186,14 +172,14 @@ final class RealStorageGrid implements BackpackGrid {
         Arrays.fill(indices, SlotBinding.INACTIVE);
         int start = (int) Math.round(target) * COLUMNS;
         int vacancy = 0;
-        if (!query.isEmpty()) {
-            while (view.contents.containsKey(Backpack.slotAt(vacancy))) vacancy++;
-        }
         for (int i = 0; i < rows * COLUMNS; i++) {
             int position = start + i;
             if (query.isEmpty()) indices[i] = Backpack.slotAt(position);
             else if (position < matches.size()) indices[i] = matches.get(position);
-            else if (position == matches.size()) indices[i] = Backpack.slotAt(vacancy);
+            else {
+                while (view.contents.containsKey(Backpack.slotAt(vacancy))) vacancy++;
+                indices[i] = Backpack.slotAt(vacancy++);
+            }
         }
         return indices;
     }
@@ -203,7 +189,7 @@ final class RealStorageGrid implements BackpackGrid {
         if (activeSlide != null) {
             drawSlide(graphics);
         } else {
-            for (int i = 0; i < drawnRows * COLUMNS; i++) {
+            for (int i = 0; i < rows * COLUMNS; i++) {
                 InventorySkin.slot(graphics, x + i % COLUMNS * CELL, y + i / COLUMNS * CELL);
             }
             view.present();
@@ -224,7 +210,7 @@ final class RealStorageGrid implements BackpackGrid {
             for (int i = 0; i < COLUMNS; i++) {
                 drawMovingSlot(graphics, x + i * CELL, outgoingY, activeSlide.departing()[i]);
             }
-            for (int i = 0; i < drawnRows * COLUMNS; i++) {
+            for (int i = 0; i < rows * COLUMNS; i++) {
                 drawMovingSlot(graphics, x + i % COLUMNS * CELL, y + i / COLUMNS * CELL + offset,
                         view.slots.cells().get(i).getItem());
             }
@@ -237,7 +223,8 @@ final class RealStorageGrid implements BackpackGrid {
         InventorySkin.slot(graphics, x, y);
         if (!stack.isEmpty()) {
             graphics.renderItem(stack, x + 1, y + 1);
-            graphics.renderItemDecorations(font, stack, x + 1, y + 1);
+            graphics.renderItemDecorations(font, stack, x + 1, y + 1,
+                    stack.getCount() >= 1_000 ? ItemCount.format(stack.getCount()) : null);
         }
     }
 
@@ -308,7 +295,7 @@ final class RealStorageGrid implements BackpackGrid {
     }
 
     private int railX() { return x + WIDTH + RAIL_GAP; }
-    private int gridHeight() { return drawnRows * CELL; }
+    private int gridHeight() { return rows * CELL; }
     private int maxRow() { return Math.max(0, totalRows - rows); }
     private int thumbHeight() { return Math.max(7, gridHeight() * rows / totalRows); }
     private int thumbTop(int thumb) { return y + (int) Math.round((gridHeight() - thumb) * target / maxRow()); }

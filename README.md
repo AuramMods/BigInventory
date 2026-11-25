@@ -6,9 +6,9 @@ BigInventory replaces the player backpack with weight-limited storage on Minecra
 
 With Patchouli installed, craft the **Big Inventory Book** from a book, gray dye, and a chest. Right-click it to open the guide to storage controls, weight, accessories, and server settings. The book is also in the creative Tools & Utilities tab. Its gray interface is adapted from the Extra Utilities Rebirth field guide.
 
-Each backpack slot holds one stack. Use normal clicks to pick up or place stacks, right-click to split stacks or place one item, and drag to distribute items. Press a number key over a slot to swap it with the corresponding hotbar slot. Scroll to reach more slots, or search by item name, registry ID, or mod using a query such as `@Biomes Black`.
+Each backpack slot holds one stack. Stackable items can reach 10,000 per backpack slot, subject to the weight limit. Use normal clicks to pick up or place stacks, right-click to split stacks or place one item, and drag to distribute items. The hotbar, crafting grid, and ordinary containers use their usual limits. A number key over a large backpack stack fills an empty or matching hotbar slot up to its usual limit. Scroll to reach more slots, or search by item name, registry ID, or mod using a query such as `@Biomes Black`.
 
-In your own inventory, shift-click to move stacks between the hotbar and backpack. In a chest or supported terminal, shift-click a backpack stack to send it to the open container. **Sort** compacts the whole backpack and groups stacks by item type. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
+In your own inventory, shift-click to move stacks between the hotbar and backpack. In a chest or supported terminal, shift-click a backpack stack to send it to the open container. Middle-click a backpack slot with an empty cursor or use **Sort** to combine matching stacks and order the whole backpack, including rows outside the current view. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
 
 The creative inventory tab and supported menus with custom player slots show grouped backpack entries.
 

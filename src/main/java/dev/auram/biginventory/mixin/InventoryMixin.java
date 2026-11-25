@@ -5,6 +5,7 @@ import dev.auram.biginventory.BackpackAccess;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.StackedContents;
@@ -16,6 +17,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -66,7 +68,7 @@ abstract class InventoryMixin implements BackpackAccess {
     private void bigInventory$returnStack(ItemStack input, boolean sendUpdates, CallbackInfo ci) {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
         bigInventory$storage.add(-1, input, false);
-        if (!input.isEmpty()) player.drop(input, false);
+        if (!input.isEmpty()) Backpack.toss(player, input, false);
         // In particular, an open chest does not synchronize the offhand.
         if (sendUpdates) {
             serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(-2, 0, 40,
@@ -74,6 +76,14 @@ abstract class InventoryMixin implements BackpackAccess {
             serverPlayer.containerMenu.broadcastChanges();
         }
         ci.cancel();
+    }
+
+    @Redirect(method = "dropAll", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/player/Player;drop(Lnet/minecraft/world/item/ItemStack;ZZ)Lnet/minecraft/world/entity/item/ItemEntity;"))
+    private ItemEntity bigInventory$dropStacks(Player owner, ItemStack stack, boolean random, boolean trace) {
+        int limit = Backpack.stackLimit(stack);
+        while (stack.getCount() > limit) owner.drop(stack.split(limit), random, trace);
+        return owner.drop(stack, random, trace);
     }
 
     @Inject(method = "replaceWith", at = @At("TAIL"))

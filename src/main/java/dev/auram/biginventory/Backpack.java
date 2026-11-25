@@ -5,13 +5,17 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 /** The first 27 cells are the legacy inventory slots. Overflow follows the equipment indices. */
@@ -19,6 +23,7 @@ public final class Backpack {
     public static final int FIRST = 9;
     public static final int LEGACY_END = 36;
     public static final int OVERFLOW_START = 41;
+    public static final int MAX_STACK = 10_000;
     public static final String SAVE_KEY = "biginventory:backpack";
     private static final int SAVE_VERSION = 2;
 
@@ -59,15 +64,37 @@ public final class Backpack {
         while (overflow.size() <= index) overflow.add(ItemStack.EMPTY);
     }
 
-    /** Compacts and orders storage while retaining the exact stacks, including Forge capabilities. */
+    /** Combines matching variants and orders storage without changing the total weight. */
     void sort() {
         int size = size();
         List<ItemStack> stacks = new ArrayList<>();
+        Map<CompoundTag, ItemStack> partialStacks = new HashMap<>();
         for (int position = 0; position < size; position++) {
             ItemStack stack = inventory.getItem(slotAt(position));
-            if (!stack.isEmpty()) stacks.add(stack);
+            if (stack.isEmpty()) continue;
+            if (!stack.isStackable()) {
+                stacks.add(stack);
+                continue;
+            }
+            int remaining = stack.getCount();
+            CompoundTag key = variantKey(stack);
+            ItemStack partial = partialStacks.get(key);
+            if (partial != null && matches(partial, stack)) {
+                int moved = Math.min(remaining, MAX_STACK - partial.getCount());
+                partial.grow(moved);
+                remaining -= moved;
+            }
+            while (remaining > 0) {
+                int count = Math.min(remaining, MAX_STACK);
+                partial = stack.copyWithCount(count);
+                stacks.add(partial);
+                remaining -= count;
+            }
+            if (partial != null) partialStacks.put(key, partial);
         }
         stacks.sort(Comparator.comparing(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem())));
+        if (stacks.size() > size) prepareSlot(slotAt(stacks.size() - 1), stacks.get(stacks.size() - 1));
+        size = Math.max(size, stacks.size());
         for (int position = 0; position < size; position++) {
             inventory.setItem(slotAt(position), position < stacks.size() ? stacks.get(position) : ItemStack.EMPTY);
         }
@@ -81,6 +108,16 @@ public final class Backpack {
 
     public static int stackLimit(ItemStack stack) {
         return Math.max(1, Math.min(64, stack.getMaxStackSize()));
+    }
+
+    public static int storageStackLimit(ItemStack stack) {
+        return stack.isStackable() ? MAX_STACK : stackLimit(stack);
+    }
+
+    public static ItemEntity toss(Player player, ItemStack stack, boolean random) {
+        int limit = stackLimit(stack);
+        while (stack.getCount() > limit) player.drop(stack.split(limit), random);
+        return player.drop(stack, random);
     }
 
     public static boolean matches(ItemStack a, ItemStack b) {
@@ -107,7 +144,7 @@ public final class Backpack {
     }
 
     public int slotLimit(int slot, ItemStack incoming) {
-        if (incoming.isEmpty()) return stackLimit(incoming);
+        if (incoming.isEmpty()) return MAX_STACK;
         return slotLimit(slot, incoming, true);
     }
 
@@ -122,7 +159,7 @@ public final class Backpack {
             return merge && matches(current, incoming) ? current.getCount() : 0;
         }
         budget.change(current, -current.getCount());
-        return budget.fit(incoming, stackLimit(incoming));
+        return budget.fit(incoming, storageStackLimit(incoming));
     }
 
     StorageWeight weightBudget() {
@@ -177,17 +214,17 @@ public final class Backpack {
             if (isStorageSlot(slot)) {
                 ItemStack current = inventory.getItem(slot);
                 if (current != input && matches(current, input) && current.isStackable()) {
-                    remaining -= put(slot, input, Math.min(remaining, stackLimit(current) - current.getCount()));
+                    remaining -= put(slot, input, Math.min(remaining, storageStackLimit(current) - current.getCount()));
                 }
             }
         }
         for (int slot = FIRST; slot < size && remaining > 0; slot++) {
             if (isStorageSlot(slot) && inventory.getItem(slot).isEmpty()) {
-                remaining -= put(slot, input, Math.min(remaining, stackLimit(input)));
+                remaining -= put(slot, input, Math.min(remaining, storageStackLimit(input)));
             }
         }
         while (remaining > 0) {
-            ItemStack stack = input.split(Math.min(remaining, stackLimit(input)));
+            ItemStack stack = input.split(Math.min(remaining, storageStackLimit(input)));
             overflow.add(stack);
             remaining -= stack.getCount();
         }
@@ -281,7 +318,10 @@ public final class Backpack {
     }
 
     public ItemStack take(ItemStack pattern, int requested) {
-        int remaining = Math.min(requested, stackLimit(pattern));
+        return takeMatching(pattern, Math.min(requested, stackLimit(pattern)));
+    }
+
+    public ItemStack takeMatching(ItemStack pattern, int remaining) {
         ItemStack taken = ItemStack.EMPTY;
         for (int slot = FIRST; slot < inventory.getContainerSize() && remaining > 0; slot++) {
             if (isStorageSlot(slot) && matches(inventory.getItem(slot), pattern)) {

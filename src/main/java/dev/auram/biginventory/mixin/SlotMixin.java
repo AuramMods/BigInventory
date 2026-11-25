@@ -1,6 +1,7 @@
 package dev.auram.biginventory.mixin;
 
 import dev.auram.biginventory.Backpack;
+import dev.auram.biginventory.BackpackViewport;
 import dev.auram.biginventory.SlotBinding;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
@@ -88,7 +89,14 @@ abstract class SlotMixin implements SlotBinding {
         } else if (container instanceof Inventory inventory && (!inventory.player.level().isClientSide
                 || bigInventory$target >= 0)
                 && Backpack.isStorageSlot(slot)) {
-            cir.setReturnValue(Math.min(cir.getReturnValueI(), Backpack.of(inventory).slotLimit(slot, incoming)));
+            int limit = Backpack.of(inventory).slotLimit(slot, incoming);
+            cir.setReturnValue(BackpackViewport.acceptsLargeStacks((Slot) (Object) this)
+                    ? limit : Math.min(cir.getReturnValueI(), limit));
         }
+    }
+
+    @Inject(method = "getMaxStackSize()I", at = @At("HEAD"), cancellable = true)
+    private void bigInventory$slotMaximum(CallbackInfoReturnable<Integer> cir) {
+        if (BackpackViewport.acceptsLargeStacks((Slot) (Object) this)) cir.setReturnValue(Backpack.MAX_STACK);
     }
 }

@@ -35,7 +35,7 @@ final class BackpackScreen extends InventoryScreen {
     protected void init() {
         imageWidth = PANEL_WIDTH;
         rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
-        imageHeight = STORAGE_TOP + StorageGrid.CELL + FOOTER;
+        imageHeight = STORAGE_TOP + rows * StorageGrid.CELL + FOOTER;
         recipeButton = null;
         super.init();
         if (minecraft.gameMode.hasInfiniteItems()) return;
@@ -67,13 +67,6 @@ final class BackpackScreen extends InventoryScreen {
         if (grid == null) return;
         int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
         grid.bounds(leftPos + gridLeft, topPos + STORAGE_TOP, leftPos, topPos, rows, showGrid());
-        int preferredHeight = STORAGE_TOP + grid.shownRows() * StorageGrid.CELL + FOOTER;
-        if (preferredHeight != imageHeight && menu.getCarried().isEmpty()) {
-            imageHeight = preferredHeight;
-            topPos = (height - imageHeight) / 2;
-            playerSlots.arrange(gridLeft - 7, imageHeight - 22);
-            grid.bounds(leftPos + gridLeft, topPos + STORAGE_TOP, leftPos, topPos, rows, showGrid());
-        }
         if (recipeButton != null) {
             Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
             recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);

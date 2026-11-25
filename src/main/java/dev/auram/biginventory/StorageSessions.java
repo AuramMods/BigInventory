@@ -26,27 +26,12 @@ final class StorageSessions {
         if (!request.open()) {
             if (old != null && old.token == request.token()) {
                 VIEWERS.remove(player.getUUID());
-                if (old.creative && player.containerMenu == old.menu && player.isAlive()) {
-                    old.menu.removed(player);
-                    old.menu.broadcastChanges();
-                }
             }
             return;
         }
         AbstractContainerMenu menu = player.containerMenu;
         if (menu.containerId != request.menu() || !validMenu(player, menu)) return;
-        ItemStack cursor = request.creativeCursor();
-        boolean creative = cursor != null;
-        if (creative) {
-            if (!player.isCreative() || menu != player.inventoryMenu) return;
-            // The catalog cursor is client-side until it enters the server-backed player tab.
-            if (menu.getCarried().isEmpty() && !cursor.isEmpty() && cursor.getCount() <= Backpack.stackLimit(cursor)
-                    && cursor.isItemEnabled(player.level().enabledFeatures())) {
-                menu.setCarried(cursor);
-            }
-            menu.broadcastFullState();
-        }
-        Viewer viewer = new Viewer(menu, request.token(), creative);
+        Viewer viewer = new Viewer(menu, request.token());
         VIEWERS.put(player.getUUID(), viewer);
         viewer.refresh(player, true);
         viewer.sendPage(player);
@@ -103,17 +88,6 @@ final class StorageSessions {
                         store.storeHotbarStack(viewer.menu.getSlot(action.entry()));
                     }
                 }
-                case CREATIVE_TRASH -> {
-                    if (viewer.creative && player.isCreative()) viewer.menu.setCarried(ItemStack.EMPTY);
-                }
-                case CREATIVE_CLEAR -> {
-                    if (viewer.creative && player.isCreative()) {
-                        player.getInventory().clearContent();
-                        for (Slot slot : viewer.menu.slots) {
-                            if (slot.container != player.getInventory()) slot.setByPlayer(ItemStack.EMPTY);
-                        }
-                    }
-                }
             }
         }
 
@@ -162,16 +136,14 @@ final class StorageSessions {
     private static final class Viewer {
         final AbstractContainerMenu menu;
         final int token;
-        final boolean creative;
         int revision;
         int sent;
         List<Entry> entries = List.of();
         List<CompoundTag> keys = List.of();
 
-        Viewer(AbstractContainerMenu menu, int token, boolean creative) {
+        Viewer(AbstractContainerMenu menu, int token) {
             this.menu = menu;
             this.token = token;
-            this.creative = creative;
         }
 
         void refresh(ServerPlayer player, boolean force) {

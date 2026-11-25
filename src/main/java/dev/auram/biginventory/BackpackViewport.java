@@ -47,7 +47,8 @@ public final class BackpackViewport {
     public boolean validates(int[] indices, Backpack backpack) {
         if (indices.length != cells.size()) return false;
         long lastRow = ((long) backpack.size() + COLUMNS - 1) / COLUMNS;
-        long limit = lastRow * COLUMNS + COLUMNS;
+        // A filtered page may need up to one viewport of empty drop targets after the last row.
+        long limit = lastRow * COLUMNS + cells.size();
         Set<Integer> used = new HashSet<>();
         for (int index : indices) {
             if (index == SlotBinding.INACTIVE) continue;
@@ -68,6 +69,12 @@ public final class BackpackViewport {
 
     public static boolean isBound(Slot slot) {
         return ((SlotBinding) slot).bigInventory$binding() >= 0;
+    }
+
+    public static boolean acceptsLargeStacks(Slot slot) {
+        return slot.getClass() == Slot.class && slot.container instanceof Inventory inventory
+                && Backpack.isStorageSlot(slot.getSlotIndex()) && !isInactive(slot)
+                && (!inventory.player.level().isClientSide || isBound(slot));
     }
 
     public static boolean isInactive(Slot slot) {

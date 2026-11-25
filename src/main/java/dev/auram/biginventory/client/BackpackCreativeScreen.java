@@ -1,6 +1,6 @@
 package dev.auram.biginventory.client;
 
-import dev.auram.biginventory.StorageNetwork.Gesture;
+import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.mixin.CreativeInventoryAccess;
 import dev.auram.biginventory.mixin.CreativeSlotAccess;
 import dev.auram.biginventory.mixin.SlotPosition;
@@ -27,8 +27,8 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
 
     private final Player player;
     private final int pickerHeight;
-    private ClientStorage.View view;
-    private StorageGrid grid;
+    private ClientViewport.View view;
+    private RealStorageGrid grid;
     private StorageSearchBox search;
     private Slot firstSlot;
     private boolean gridClick;
@@ -43,11 +43,15 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         return view != null && isInventoryOpen();
     }
 
+    boolean displays(ClientViewport.View candidate) {
+        return view == candidate && isInventoryOpen();
+    }
+
     @Override
     protected void init() {
         imageHeight = pickerHeight;
         super.init();
-        if (isStorageOpen()) addRenderableWidget(search);
+        if (isStorageOpen()) for (var widget : grid.widgets()) addRenderableWidget(widget);
         syncInventoryTab();
     }
 
@@ -82,19 +86,29 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         if (view == null) {
             // The picker still renders its native slots and tabs. Inventory clicks use menu zero.
             player.containerMenu = player.inventoryMenu;
-            view = ClientStorage.open(player.inventoryMenu, menu.getCarried());
-            grid = new StorageGrid(view, font, "");
-            search = addRenderableWidget(grid.search());
+            view = ClientViewport.open(player.inventoryMenu, player.getInventory(), menu.getCarried());
+            if (view == null) return;
+            grid = new RealStorageGrid(view, font, "");
+            search = grid.search();
+            for (var widget : grid.widgets()) addRenderableWidget(widget);
         }
-        grid.bounds(leftPos + 8, topPos + GRID_TOP, ROWS, SEARCH_PADDING);
+        grid.bounds(leftPos + 8, topPos + GRID_TOP, leftPos, topPos, ROWS, true, SEARCH_PADDING);
+        for (Slot slot : menu.slots) {
+            if (slot instanceof CreativeSlotAccess wrapper && view.slots.cells().contains(wrapper.bigInventory$targetSlot())) {
+                Slot target = wrapper.bigInventory$targetSlot();
+                SlotPosition position = (SlotPosition) slot;
+                position.bigInventory$setX(target.x);
+                position.bigInventory$setY(target.y);
+            }
+        }
     }
 
     private void closeStorage() {
-        ClientStorage.close(view);
+        ClientViewport.close(view);
         if (view != null) player.inventoryMenu.setCarried(ItemStack.EMPTY);
         if (search != null) {
             if (getFocused() == search) setFocused(null);
-            removeWidget(search);
+            for (var widget : grid.widgets()) removeWidget(widget);
         }
         view = null;
         grid = null;
@@ -151,6 +165,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float time) {
+        syncInventoryTab();
         super.render(graphics, mouseX, mouseY, time);
         if (isStorageOpen()) grid.tooltip(graphics, mouseX, mouseY);
     }
@@ -214,9 +229,9 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             super.slotClicked(slot, id, button, click);
             return;
         }
-        if (view.revision == 0) return;
+        if (!view.interactive()) return;
         if (slot != null && slot == trashSlot()) {
-            view.act(-1, click == ClickType.QUICK_MOVE ? Gesture.CREATIVE_CLEAR : Gesture.CREATIVE_TRASH);
+            new CreativeTrash(view.token, click == ClickType.QUICK_MOVE).send();
             return;
         }
         int index = id;

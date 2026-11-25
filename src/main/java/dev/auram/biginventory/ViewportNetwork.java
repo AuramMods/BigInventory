@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.client.ClientViewport;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -8,6 +9,7 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.simple.SimpleChannel;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +32,9 @@ public final class ViewportNetwork {
         channel.messageBuilder(Ready.class, 10, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(Ready::encode).decoder(Ready::decode).consumerMainThread((msg, ctx) ->
                         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientViewport.ready(msg))).add();
+        channel.messageBuilder(CreativeTrash.class, 11, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(CreativeTrash::encode).decoder(CreativeTrash::decode).consumerMainThread((msg, ctx) ->
+                        ViewportSessions.trash(ctx.get().getSender(), msg)).add();
     }
 
     public static void request(Access message) {
@@ -40,13 +45,25 @@ public final class ViewportNetwork {
         StorageNetwork.sendToServer(message);
     }
 
-    public record Access(int menu, int token, boolean open) {
+    public record Access(int menu, int token, boolean open, @Nullable ItemStack creativeCursor) {
         private void encode(FriendlyByteBuf buf) {
-            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open);
+            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open).writeBoolean(creativeCursor != null);
+            if (creativeCursor != null) buf.writeNbt(creativeCursor.save(new CompoundTag()));
         }
 
         private static Access decode(FriendlyByteBuf buf) {
-            return new Access(buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
+            return new Access(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
+                    buf.readBoolean() ? ItemStack.of(buf.readNbt()) : null);
+        }
+    }
+
+    public record CreativeTrash(int token, boolean clear) {
+        public void send() { StorageNetwork.sendToServer(this); }
+
+        private void encode(FriendlyByteBuf buf) { buf.writeVarInt(token).writeBoolean(clear); }
+
+        private static CreativeTrash decode(FriendlyByteBuf buf) {
+            return new CreativeTrash(buf.readVarInt(), buf.readBoolean());
         }
     }
 

@@ -6,7 +6,7 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Equip one Endant in a Necklace slot. The first stack's worth of each stored item variant is charged at full weight. Every additional item of that variant costs half its usual weight. Splitting items between stacks inside storage does not change the calculation."
+      "text": "Equip one Endant in a Necklace slot. The first regular stack's worth of each stored item variant is charged at full weight. Every additional item of that variant costs half its usual weight. Splitting items between stacks inside storage does not change the calculation."
     },
     {
       "type": "patchouli:crafting",
