@@ -121,6 +121,7 @@ public final class ClientViewport {
         ((MenuStorageAccess) view.menu).bigInventory$resetQuickCraft();
         if (Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen && represents(screen, view)) {
             ((ViewportScreen) screen).bigInventory$resetPageGesture();
+            if (screen instanceof BackpackCreativeScreen creative) creative.cancelQuickMoveAnimation();
         }
         int[] previous = view.mapping;
         view.mapping = message.slots();

@@ -11,7 +11,7 @@
     {
       "type": "patchouli:text",
       "title": "Footprint",
-      "text": "$(thing)Weight per item$() is the footprint factor divided by the item's maximum stack size, rounded up. The factor is 32 by default.$(br2)$(li)Cobblestone (stacks to 64) weighs 1.$(li)Empty buckets (stack to 16) weigh 2.$(li)Unstackable tools weigh 32."
+      "text": "$(thing)Weight per item$() is the footprint factor divided by the item's regular maximum stack size, rounded up. The factor is 32 by default.$(br2)$(li)Cobblestone (normally stacks to 64) weighs 1.$(li)Empty buckets (normally stack to 16) weigh 2.$(li)Tools that normally stack to 1 weigh 32."
     },
     {
       "type": "patchouli:text",

@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /** Screen-local animation for transfers the vanilla slot tracker cannot observe. */
 record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis, List<Flight> flights,
@@ -49,6 +50,24 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
         return flights.isEmpty() ? null : new StorageSwapAnimation(timing, Util.getMillis(), flights, newEntry, pickedUp);
     }
 
+    @Nullable
+    static StorageSwapAnimation quickMove(AbstractContainerScreen<?> screen, Slot source, ItemStack beforeSource,
+                                          Map<Slot, ItemStack> before, SmoothSwappingCompat.Timing timing) {
+        Point origin = slotPosition(screen, screen.getMenu(), source);
+        if (origin == null || ItemStack.matches(source.getItem(), beforeSource)) return null;
+        List<Flight> flights = new ArrayList<>();
+        for (var change : before.entrySet()) {
+            Slot slot = change.getKey();
+            ItemStack previous = change.getValue();
+            ItemStack arrival = slot.getItem();
+            if (!Backpack.matches(beforeSource, arrival) || arrival.getCount() <= previous.getCount()) continue;
+            Point destination = slotPosition(screen, screen.getMenu(), slot);
+            if (destination != null) flights.add(new Flight(arrival.copyWithCount(1), origin, destination,
+                    slot, arrival.copy(), previous));
+        }
+        return flights.isEmpty() ? null : new StorageSwapAnimation(timing, Util.getMillis(), flights, null, null);
+    }
+
     boolean active() {
         return elapsed() < 1.0;
     }
@@ -76,13 +95,17 @@ record StorageSwapAnimation(SmoothSwappingCompat.Timing timing, long startMillis
         return pickedUp != null && ItemStack.matches(pickedUp, stack) ? ItemStack.EMPTY : stack;
     }
 
-    void render(GuiGraphics graphics, AbstractContainerScreen<?> screen, int mouseX, int mouseY, ClientStorage.View view) {
+    void render(GuiGraphics graphics, AbstractContainerScreen<?> screen, int mouseX, int mouseY,
+                @Nullable ClientStorage.View view) {
         double elapsed = elapsed();
         if (elapsed >= 1.0) return;
         float progress = (float) timing.curve().applyAsDouble(elapsed);
         for (Flight flight : flights) {
-            if (flight.slot() != null && !ItemStack.matches(flight.arrival(), view.renderedSlot(flight.slot()))) continue;
-            if (flight.to() == null && !ItemStack.matches(flight.arrival(), view.renderedCarried())) continue;
+            if (flight.slot() != null) {
+                ItemStack actual = view == null ? flight.slot().getItem() : view.renderedSlot(flight.slot());
+                if (!ItemStack.matches(flight.arrival(), actual)) continue;
+            }
+            if (flight.to() == null && (view == null || !ItemStack.matches(flight.arrival(), view.renderedCarried()))) continue;
             Point from = flight.from();
             Point to = flight.to() == null ? new Point(mouseX, mouseY) : flight.to();
             float x = Mth.lerp(progress, from.x(), to.x()) - screen.getGuiLeft();

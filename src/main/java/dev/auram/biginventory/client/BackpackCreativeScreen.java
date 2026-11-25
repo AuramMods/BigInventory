@@ -1,5 +1,6 @@
 package dev.auram.biginventory.client;
 
+import dev.auram.biginventory.Backpack;
 import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.mixin.CreativeInventoryAccess;
 import dev.auram.biginventory.mixin.CreativeSlotAccess;
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
@@ -16,6 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     private static final int ROWS = 3;
@@ -32,6 +36,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
     private StorageSearchBox search;
     private Slot firstSlot;
     private boolean gridClick;
+    @Nullable private StorageSwapAnimation quickMoveAnimation;
 
     BackpackCreativeScreen(Player player, FeatureFlagSet features, boolean showOperatorTab) {
         super(player, features, showOperatorTab);
@@ -115,6 +120,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         search = null;
         firstSlot = null;
         gridClick = false;
+        quickMoveAnimation = null;
     }
 
     @Override
@@ -161,6 +167,21 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             if (slot instanceof CreativeSlotAccess wrapper && wrapper.bigInventory$targetSlot() == backing) return slot;
         }
         return null;
+    }
+
+    ItemStack renderQuickMoveSlot(Slot slot) {
+        ItemStack stack = slot.getItem();
+        return quickMoveAnimation != null && quickMoveAnimation.active() ? quickMoveAnimation.drawSlot(slot, stack) : stack;
+    }
+
+    void renderQuickMove(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (quickMoveAnimation != null && quickMoveAnimation.active()) {
+            quickMoveAnimation.render(graphics, this, mouseX, mouseY, null);
+        } else quickMoveAnimation = null;
+    }
+
+    void cancelQuickMoveAnimation() {
+        quickMoveAnimation = null;
     }
 
     @Override
@@ -230,6 +251,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             return;
         }
         if (!view.interactive()) return;
+        quickMoveAnimation = null;
         if (slot != null && slot == trashSlot()) {
             new CreativeTrash(view.token, click == ClickType.QUICK_MOVE).send();
             return;
@@ -241,6 +263,24 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
             index = target.index;
             if (index < 0 || index >= view.menu.slots.size() || view.menu.getSlot(index) != target) return;
         }
+        // Smooth Swapping skips Creative screens. Observe the native click through this tab's visible wrappers.
+        var timing = click == ClickType.QUICK_MOVE && slot != null && slot.hasItem()
+                && slot.container == player.getInventory() ? SmoothSwappingCompat.timing() : null;
+        if (timing == null) {
+            minecraft.gameMode.handleInventoryMouseClick(view.menu.containerId, index, button, click, player);
+            return;
+        }
+        ItemStack beforeSource = slot.getItem().copy();
+        boolean fromHotbar = Inventory.isHotbarSlot(slot.getSlotIndex());
+        Map<Slot, ItemStack> before = new LinkedHashMap<>();
+        for (Slot destination : menu.slots) {
+            if (destination.container != player.getInventory() || !destination.isActive() || destination.x < 0) continue;
+            int inventorySlot = destination.getSlotIndex();
+            if (fromHotbar ? Backpack.isStorageSlot(inventorySlot) : Inventory.isHotbarSlot(inventorySlot)) {
+                before.put(destination, destination.getItem().copy());
+            }
+        }
         minecraft.gameMode.handleInventoryMouseClick(view.menu.containerId, index, button, click, player);
+        quickMoveAnimation = StorageSwapAnimation.quickMove(this, slot, beforeSource, before, timing);
     }
 }

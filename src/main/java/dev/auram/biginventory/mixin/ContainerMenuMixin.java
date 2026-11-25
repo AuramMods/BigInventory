@@ -5,12 +5,14 @@ import dev.auram.biginventory.BackpackViewport;
 import dev.auram.biginventory.MenuPlayerSlots;
 import dev.auram.biginventory.MenuStorageAccess;
 import dev.auram.biginventory.SlotBinding;
+import dev.auram.biginventory.StorageTransfers;
 import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
@@ -25,8 +27,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import java.util.List;
 
 @Mixin(AbstractContainerMenu.class)
 abstract class ContainerMenuMixin implements MenuStorageAccess {
@@ -88,7 +88,7 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
         }
         if (bigInventory$beforeCollect >= 0 && !carried.isEmpty()) {
             Backpack backpack = Backpack.of(player.getInventory());
-            ItemStack extra = backpack.takeMatching(carried, Backpack.storageStackLimit(carried) - carried.getCount());
+            ItemStack extra = backpack.takeMatching(carried, Backpack.MAX_STACK - carried.getCount());
             carried.grow(extra.getCount());
             long withdrawn = bigInventory$beforeCollect - backpack.countStored(carried);
             borrowed += (int) Math.max(0, Math.min(withdrawn, carried.getCount() - bigInventory$beforeClickCount));
@@ -132,33 +132,30 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
     @Inject(method = "doClick", at = @At(value = "INVOKE", ordinal = 0,
             target = "Lnet/minecraft/world/inventory/AbstractContainerMenu;quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;"),
             cancellable = true)
-    private void bigInventory$storeHotbarStack(int slotIndex, int button, ClickType click, Player player, CallbackInfo ci) {
-        if (!((Object) this instanceof InventoryMenu)) return;
+    private void bigInventory$shiftBackpack(int slotIndex, int button, ClickType click, Player player, CallbackInfo ci) {
+        AbstractContainerMenu menu = (AbstractContainerMenu) (Object) this;
         Inventory inventory = player.getInventory();
         Slot slot = slots.get(slotIndex);
         if (slot.container != inventory) return;
-        if (Inventory.isHotbarSlot(slot.getSlotIndex())) {
-            if (((SlotBinding) slots.get(InventoryMenu.INV_SLOT_START)).bigInventory$binding() != SlotBinding.UNBOUND) {
-                ItemStack stack = slot.getItem();
-                int original = stack.getCount();
-                BackpackViewport viewport = BackpackViewport.find((InventoryMenu) (Object) this, inventory);
-                if (viewport != null) bigInventory$fillVisibleSlots(stack, viewport.cells());
-                if (!stack.isEmpty() && !player.level().isClientSide) Backpack.of(inventory).insert(stack, stack.getCount());
-                if (original != stack.getCount()) {
-                    if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
-                    else slot.setChanged();
-                    slot.onTake(player, stack);
-                }
-            } else if (!player.level().isClientSide) {
+        if (menu instanceof InventoryMenu && Inventory.isHotbarSlot(slot.getSlotIndex())) {
+            if (!player.level().isClientSide
+                    || ((SlotBinding) slots.get(InventoryMenu.INV_SLOT_START)).bigInventory$binding() != SlotBinding.UNBOUND) {
                 Backpack.of(inventory).storeHotbarStack(slot);
             }
             ci.cancel();
         } else if (BackpackViewport.isBound(slot)) {
-            ItemStack stack = slot.getItem();
-            if (moveItemStackTo(stack, InventoryMenu.USE_ROW_SLOT_START, InventoryMenu.USE_ROW_SLOT_END, false)) {
-                if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
-                else slot.setChanged();
-                slot.onTake(player, stack);
+            if (menu instanceof InventoryMenu) {
+                ItemStack stack = slot.getItem();
+                int offered = Math.min(stack.getCount(), Backpack.stackLimit(stack));
+                ItemStack portion = stack.copyWithCount(offered);
+                if (moveItemStackTo(portion, InventoryMenu.USE_ROW_SLOT_START, InventoryMenu.USE_ROW_SLOT_END, false)) {
+                    stack.shrink(offered - portion.getCount());
+                    if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
+                    else slot.setChanged();
+                    slot.onTake(player, stack);
+                }
+            } else {
+                StorageTransfers.moveFromSlot(inventory, menu, slot);
             }
             ci.cancel();
         }
@@ -221,7 +218,7 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
             target = "Lnet/minecraft/world/inventory/ClickType;PICKUP_ALL:Lnet/minecraft/world/inventory/ClickType;")),
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;getMaxStackSize()I"))
     private int bigInventory$collectLimit(ItemStack stack, int index, int button, ClickType type, Player player) {
-        return BackpackViewport.isBound(slots.get(index)) ? Backpack.storageStackLimit(stack) : stack.getMaxStackSize();
+        return BackpackViewport.isBound(slots.get(index)) ? Backpack.MAX_STACK : stack.getMaxStackSize();
     }
 
     @Redirect(method = "doClick", at = @At(value = "INVOKE",
@@ -251,15 +248,20 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
                 break;
             }
         }
+        if (destination != null && ((Object) this).getClass() == ChestMenu.class) {
+            cir.setReturnValue(Backpack.of(destination).receiveFromChest(input));
+            return;
+        }
         if (destination == null && !filterPlayerSlots && input.getCount() <= Backpack.stackLimit(input)) return;
 
         int original = input.getCount();
         int start = reverse ? to - 1 : from;
         int end = reverse ? from - 1 : to;
         int step = reverse ? -1 : 1;
-        for (int i = start; i != end && !input.isEmpty() && input.isStackable(); i += step) {
+        for (int i = start; i != end && !input.isEmpty(); i += step) {
             Slot slot = slots.get(i);
             if (filterPlayerSlots && MenuPlayerSlots.index(slot, exporting) >= 0) continue;
+            if (!input.isStackable() && !BackpackViewport.acceptsLargeStacks(slot)) continue;
             if (slot.getItem() != input && Backpack.matches(slot.getItem(), input)) bigInventory$moveToSlot(input, slot);
         }
         for (int i = start; i != end && !input.isEmpty(); i += step) {
@@ -278,18 +280,6 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
             if (!sourceInBackpack) Backpack.of(destination).insert(input, input.getCount());
         }
         cir.setReturnValue(original != input.getCount());
-    }
-
-    @Unique
-    private static void bigInventory$fillVisibleSlots(ItemStack input, List<Slot> cells) {
-        for (Slot slot : cells) {
-            if (input.isEmpty()) return;
-            if (Backpack.matches(slot.getItem(), input)) bigInventory$moveToSlot(input, slot);
-        }
-        for (Slot slot : cells) {
-            if (input.isEmpty()) return;
-            if (slot.getItem().isEmpty()) bigInventory$moveToSlot(input, slot);
-        }
     }
 
     @Unique

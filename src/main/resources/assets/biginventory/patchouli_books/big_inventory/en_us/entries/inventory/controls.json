@@ -6,12 +6,12 @@
   "pages": [
     {
       "type": "patchouli:text",
-      "text": "Open your inventory to see your backpack above the nine hotbar slots. A backpack slot can hold up to 10,000 of a stackable item if you have enough capacity. Scroll to reach more slots.$(br2)The hotbar and crafting grid use their usual stack sizes."
+      "text": "Open your inventory to see your backpack above the nine hotbar slots. A backpack slot can hold up to 10,000 identical items if you have enough capacity. Even tools and discs can stack when their item data matches.$(br2)Scroll to reach more slots. The hotbar and crafting grid use their usual stack sizes."
     },
     {
       "type": "patchouli:text",
       "title": "Find Items",
-      "text": "Click $(thing)Search$() to filter by item name or registry ID. Use $(thing)@ModName$() to filter by mod, for example $(thing)@Biomes Black$(). Middle-click a backpack slot with an empty cursor or click $(thing)Sort$() to combine matching stacks across the whole backpack."
+      "text": "Click $(thing)Search$() to filter by item name or registry ID. Use $(thing)@ModName$() to filter by mod, for example $(thing)@Biomes Black$(). Middle-click a backpack slot with an empty cursor to combine matching stacks across the whole backpack."
     },
     {
       "type": "patchouli:text",

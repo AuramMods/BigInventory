@@ -44,6 +44,7 @@ final class ViewportSessions {
             return;
         }
         if (previous != null) close(player, previous);
+        if (menu == player.inventoryMenu) Backpack.of(player.getInventory()).removeLeadingVacancies();
         if (creative && menu.getCarried().isEmpty() && !cursor.isEmpty()
                 && cursor.getCount() <= Backpack.stackLimit(cursor) && cursor.isItemEnabled(player.level().enabledFeatures())) {
             menu.setCarried(cursor);

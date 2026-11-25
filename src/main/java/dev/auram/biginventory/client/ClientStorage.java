@@ -96,6 +96,8 @@ public final class ClientStorage {
     }
 
     public static ItemStack renderedSlot(AbstractContainerMenu menu, Slot slot, boolean animate) {
+        if (animate && Minecraft.getInstance().screen instanceof BackpackCreativeScreen creative
+                && creative.getMenu() == menu) return creative.renderQuickMoveSlot(slot);
         View visible = visibleView(menu);
         if (visible == null) return slot.getItem();
         Slot backing = slot;
@@ -111,6 +113,9 @@ public final class ClientStorage {
 
     static void renderTransfers(ContainerScreenEvent.Render.Foreground event) {
         var screen = event.getContainerScreen();
+        if (screen instanceof BackpackCreativeScreen creative) {
+            creative.renderQuickMove(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
+        }
         View visible = visibleView(screen.getMenu());
         var animation = visible == null ? null : visible.animation();
         if (animation != null) {

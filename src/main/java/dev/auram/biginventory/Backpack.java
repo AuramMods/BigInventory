@@ -64,6 +64,21 @@ public final class Backpack {
         while (overflow.size() <= index) overflow.add(ItemStack.EMPTY);
     }
 
+    void removeLeadingVacancies() {
+        int size = size();
+        int first = 0;
+        while (first < size && inventory.getItem(slotAt(first)).isEmpty()) first++;
+        if (first == 0 || first == size) return;
+        for (int position = first; position < size; position++) {
+            inventory.setItem(slotAt(position - first), inventory.getItem(slotAt(position)));
+        }
+        for (int position = size - first; position < size; position++) {
+            inventory.setItem(slotAt(position), ItemStack.EMPTY);
+        }
+        trimEmptyTail();
+        inventory.setChanged();
+    }
+
     /** Combines matching variants and orders storage without changing the total weight. */
     void sort() {
         int size = size();
@@ -72,10 +87,6 @@ public final class Backpack {
         for (int position = 0; position < size; position++) {
             ItemStack stack = inventory.getItem(slotAt(position));
             if (stack.isEmpty()) continue;
-            if (!stack.isStackable()) {
-                stacks.add(stack);
-                continue;
-            }
             int remaining = stack.getCount();
             CompoundTag key = variantKey(stack);
             ItemStack partial = partialStacks.get(key);
@@ -108,10 +119,6 @@ public final class Backpack {
 
     public static int stackLimit(ItemStack stack) {
         return Math.max(1, Math.min(64, stack.getMaxStackSize()));
-    }
-
-    public static int storageStackLimit(ItemStack stack) {
-        return stack.isStackable() ? MAX_STACK : stackLimit(stack);
     }
 
     public static ItemEntity toss(Player player, ItemStack stack, boolean random) {
@@ -159,7 +166,7 @@ public final class Backpack {
             return merge && matches(current, incoming) ? current.getCount() : 0;
         }
         budget.change(current, -current.getCount());
-        return budget.fit(incoming, storageStackLimit(incoming));
+        return budget.fit(incoming, MAX_STACK);
     }
 
     StorageWeight weightBudget() {
@@ -208,27 +215,43 @@ public final class Backpack {
     }
 
     private void store(ItemStack input, int count) {
-        int remaining = count;
+        int remaining = mergeStored(input, count);
         int size = inventory.getContainerSize();
         for (int slot = FIRST; slot < size && remaining > 0; slot++) {
-            if (isStorageSlot(slot)) {
-                ItemStack current = inventory.getItem(slot);
-                if (current != input && matches(current, input) && current.isStackable()) {
-                    remaining -= put(slot, input, Math.min(remaining, storageStackLimit(current) - current.getCount()));
-                }
-            }
-        }
-        for (int slot = FIRST; slot < size && remaining > 0; slot++) {
             if (isStorageSlot(slot) && inventory.getItem(slot).isEmpty()) {
-                remaining -= put(slot, input, Math.min(remaining, storageStackLimit(input)));
+                remaining -= put(slot, input, Math.min(remaining, MAX_STACK));
             }
         }
         while (remaining > 0) {
-            ItemStack stack = input.split(Math.min(remaining, storageStackLimit(input)));
+            ItemStack stack = input.split(Math.min(remaining, MAX_STACK));
             overflow.add(stack);
             remaining -= stack.getCount();
         }
         inventory.setChanged();
+    }
+
+    private int mergeStored(ItemStack input, int remaining) {
+        for (int position = 0; position < size() && remaining > 0; position++) {
+            int slot = slotAt(position);
+            ItemStack current = inventory.getItem(slot);
+            if (current != input && matches(current, input)) {
+                remaining -= put(slot, input, Math.min(remaining, MAX_STACK - current.getCount()));
+            }
+        }
+        return remaining;
+    }
+
+    public boolean receiveFromChest(ItemStack input) {
+        if (input.isEmpty()) return false;
+        int initial = input.getCount();
+        // Vanilla fills matching stacks before empty slots and visits the hotbar before storage.
+        for (int slot = 0; slot < FIRST && !input.isEmpty(); slot++) {
+            if (matches(inventory.getItem(slot), input)) insertAt(slot, input, input.getCount());
+        }
+        if (!input.isEmpty()) mergeStored(input, weightBudget().fit(input, input.getCount()));
+        fillEmptyHotbar(input);
+        insert(input, input.getCount());
+        return initial != input.getCount();
     }
 
     public void storeHotbarStack(Slot slot) {
@@ -236,6 +259,7 @@ public final class Backpack {
         ItemStack stack = slot.getItem();
         if (insert(stack, stack.getCount()) > 0) {
             if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
+            else slot.setChanged();
             slot.onTake(inventory.player, stack);
         }
     }
@@ -268,9 +292,7 @@ public final class Backpack {
         if (storageFirst) insert(input, initial);
 
         insertMatchingHotbar(input);
-        for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
-            if (inventory.items.get(i).isEmpty()) insertAt(i, input, input.getCount());
-        }
+        fillEmptyHotbar(input);
         if (!storageFirst) insert(input, input.getCount());
         return initial - input.getCount();
     }
@@ -302,6 +324,10 @@ public final class Backpack {
         for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
             if (i != inventory.selected && matches(inventory.items.get(i), input)) insertAt(i, input, input.getCount());
         }
+        fillEmptyHotbar(input);
+    }
+
+    private void fillEmptyHotbar(ItemStack input) {
         for (int i = 0; i < FIRST && !input.isEmpty(); i++) {
             if (inventory.items.get(i).isEmpty()) insertAt(i, input, input.getCount());
         }

@@ -50,7 +50,7 @@ abstract class InventoryHandlerMixin {
         ItemStack old = inventory.getItem(slot);
         // Allow a caller to write back an in-place item update, even while encumbered.
         boolean existing = stack.getItem() == old.getItem() && backpack.weight(stack) <= backpack.weight(old);
-        if (slot >= inventory.getContainerSize() || stack.getCount() > Backpack.storageStackLimit(stack)
+        if (slot >= inventory.getContainerSize() || stack.getCount() > Backpack.MAX_STACK
                 || (!existing && stack.getCount() > backpack.replacementLimit(slot, stack))) {
             throw new IllegalArgumentException("Player storage cannot accept the requested slot contents");
         }

@@ -1,10 +1,7 @@
 package dev.auram.biginventory.mixin;
 
 import dev.auram.biginventory.client.ClientStorage;
-import dev.auram.biginventory.client.ItemCount;
 import dev.auram.biginventory.client.ViewportScreen;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -72,12 +69,5 @@ abstract class StorageScreenPredictionMixin implements ViewportScreen {
             target = "Ljava/lang/Math;min(II)I", ordinal = 0))
     private int bigInventory$distributeLimit(int itemLimit, int slotLimit) {
         return slotLimit;
-    }
-
-    @Redirect(method = {"renderSlot", "renderFloatingItem"}, at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;renderItemDecorations(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;IILjava/lang/String;)V"))
-    private void bigInventory$renderCount(GuiGraphics graphics, Font font, ItemStack stack, int x, int y, String label) {
-        if (label == null && stack.getCount() >= 1_000) label = ItemCount.format(stack.getCount());
-        graphics.renderItemDecorations(font, stack, x, y, label);
     }
 }

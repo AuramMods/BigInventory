@@ -44,6 +44,31 @@ public final class StorageTransfers {
         }
     }
 
+    public static void moveFromSlot(Inventory inventory, AbstractContainerMenu menu, Slot slot) {
+        ItemStack stored = slot.getItem();
+        if (stored.isEmpty()) return;
+        ((MenuStorageAccess) menu).bigInventory$runStorageExport(inventory, () -> {
+            int limit = Backpack.stackLimit(stored);
+            if (stored.getCount() <= limit) {
+                menu.quickMoveStack(inventory.player, slot.index);
+                return;
+            }
+            // Let the menu handle its own destination, with just one regular stack in the source slot.
+            slot.set(stored.split(limit));
+            try {
+                menu.quickMoveStack(inventory.player, slot.index);
+            } finally {
+                ItemStack remainder = slot.getItem();
+                if (remainder.isEmpty() || Backpack.matches(stored, remainder)) {
+                    stored.grow(remainder.getCount());
+                    slot.set(stored);
+                } else {
+                    Backpack.of(inventory).returnTransferRemainder(stored);
+                }
+            }
+        });
+    }
+
     public static Map<Slot, ItemStack> previewToHotbar(Inventory inventory, AbstractContainerMenu menu, ItemStack proposal) {
         Map<Slot, ItemStack> preview = new HashMap<>();
         Slot[] hotbar = new Slot[Inventory.getSelectionSize()];

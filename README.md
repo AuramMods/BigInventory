@@ -6,15 +6,15 @@ BigInventory replaces the player backpack with weight-limited storage on Minecra
 
 With Patchouli installed, craft the **Big Inventory Book** from a book, gray dye, and a chest. Right-click it to open the guide to storage controls, weight, accessories, and server settings. The book is also in the creative Tools & Utilities tab. Its gray interface is adapted from the Extra Utilities Rebirth field guide.
 
-Each backpack slot holds one stack. Stackable items can reach 10,000 per backpack slot, subject to the weight limit. Use normal clicks to pick up or place stacks, right-click to split stacks or place one item, and drag to distribute items. The hotbar, crafting grid, and ordinary containers use their usual limits. A number key over a large backpack stack fills an empty or matching hotbar slot up to its usual limit. Scroll to reach more slots, or search by item name, registry ID, or mod using a query such as `@Biomes Black`.
+Each backpack slot can hold up to 10,000 matching items, subject to the weight limit. Discs and tools can stack when their item data matches, including damage, tags, and Forge capabilities. Use normal clicks to pick up or place stacks, right-click to split stacks or place one item, and drag to distribute items. The hotbar, crafting grid, and ordinary containers use their usual limits. A number key over a large backpack stack fills an empty or matching hotbar slot up to its usual limit. Scroll to reach more slots, or search by item name, registry ID, or mod using a query such as `@Biomes Black`.
 
-In your own inventory, shift-click to move stacks between the hotbar and backpack. In a chest or supported terminal, shift-click a backpack stack to send it to the open container. Middle-click a backpack slot with an empty cursor or use **Sort** to combine matching stacks and order the whole backpack, including rows outside the current view. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
+Shift-click a backpack slot to move up to one regular stack to the hotbar or the open container. Incoming chest transfers fill matching stacks first, then use the first empty hotbar slot or the first empty backpack slot. Opening your player inventory shifts the contents past any leading empty slots and preserves their order. Middle-click a backpack slot with an empty cursor to combine matching stacks and order the whole backpack, including rows outside the current view. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
 
 The creative inventory tab and supported menus with custom player slots show grouped backpack entries.
 
 The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
 
-Server-side capacity defaults to 500. With the default footprint factor of 32, a cobblestone takes one unit, an empty bucket takes two, and an unstackable tool takes 32. If equipment changes put you over capacity, you keep your items and can withdraw them. Deposits resume when there is room. Movement slows by half and Mining Fatigue I applies while overloaded.
+Server-side capacity defaults to 500. With the default footprint factor of 32, a cobblestone takes one unit, an empty bucket takes two, and a normally unstackable tool takes 32. If equipment changes put you over capacity, you keep your items and can withdraw them. Deposits resume when there is room. Movement slows by half and Mining Fatigue I applies while overloaded.
 
 ### Curios accessories
 
