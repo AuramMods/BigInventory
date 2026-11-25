@@ -233,6 +233,10 @@ public final class ContainerBackpack {
         return active != null && active.screen() == screen && active.visible();
     }
 
+    public static boolean replacesPlayerSlot(AbstractContainerScreen<?> screen, boolean hotbar) {
+        return replacesPlayerInventory(screen) && (!hotbar || active.nativeHotbarY() >= 0);
+    }
+
     public static int extendedHeight(AbstractContainerScreen<?> screen, int nativeHeight) {
         if (!replacesPlayerInventory(screen) || active.section().extension() == 0) return nativeHeight;
         Rect2i panel = active.mainPanel();
