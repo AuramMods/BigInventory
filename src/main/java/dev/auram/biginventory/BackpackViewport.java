@@ -44,11 +44,20 @@ public final class BackpackViewport {
         return cells;
     }
 
+    public static int rowsFor(int cellCount, boolean spareRow) {
+        if (cellCount == 0) return 0;
+        return (cellCount - 1) / COLUMNS + (spareRow ? 2 : 1);
+    }
+
     public boolean validates(int[] indices, Backpack backpack) {
         if (indices.length != cells.size()) return false;
         long lastRow = ((long) backpack.size() + COLUMNS - 1) / COLUMNS;
         // A filtered page may need up to one viewport of empty drop targets after the last row.
         long limit = lastRow * COLUMNS + cells.size();
+        // The current page can stay open when removing the last occupied row shrinks the backing inventory.
+        for (Slot cell : cells) {
+            if (isBound(cell)) limit = Math.max(limit, (long) Backpack.positionOf(cell.getSlotIndex()) + 1);
+        }
         Set<Integer> used = new HashSet<>();
         for (int index : indices) {
             if (index == SlotBinding.INACTIVE) continue;

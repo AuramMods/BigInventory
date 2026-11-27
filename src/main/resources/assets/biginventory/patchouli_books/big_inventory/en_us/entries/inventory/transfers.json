@@ -15,6 +15,11 @@
     },
     {
       "type": "patchouli:text",
+      "title": "Bulk Transfers",
+      "text": "Hold $(thing)Control$() and left-click an oversized backpack stack to send items to your hotbar or the open container. The transfer continues until it runs out of items or the destination stops accepting them. Use the Control key on macOS too."
+    },
+    {
+      "type": "patchouli:text",
       "title": "Other Mods",
       "text": "Supported screens replace the usual player storage rows with the storage grid. Some modded screens with custom layouts need their own integration. With JEI installed, click either search field to choose where your typing goes."
     },

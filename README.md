@@ -8,7 +8,9 @@ With Patchouli installed, craft the **Big Inventory Book** from a book, gray dye
 
 Each backpack slot can hold up to 10,000 matching items, subject to the weight limit. Discs and tools can stack when their item data matches, including damage, tags, and Forge capabilities. Use normal clicks to pick up or place stacks, right-click to split stacks or place one item, and drag to distribute items. The hotbar, crafting grid, and ordinary containers use their usual limits. A number key over a large backpack stack fills an empty or matching hotbar slot up to its usual limit. Scroll to reach more slots, or search by item name, registry ID, or mod using a query such as `@Biomes Black`.
 
-Shift-click a backpack slot to move up to one regular stack to the hotbar or the open container. Incoming chest transfers fill matching stacks first, then use the first empty hotbar slot or the first empty backpack slot. Opening your player inventory shifts the contents past any leading empty slots and preserves their order. Middle-click a backpack slot with an empty cursor to combine matching stacks and order the whole backpack, including rows outside the current view. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
+Shift-click a backpack slot to move up to one regular stack to the hotbar or the open container. Control-click an oversized stack to keep transferring from it until the destination fills or the stack runs out. Incoming chest transfers fill matching stacks first, then use the first empty hotbar slot or the first empty backpack slot.
+
+The backpack exposes another row as soon as the last row holds an item. Scroll down to reach the new row. Opening your player inventory shifts the contents past any leading empty slots and preserves their order. Middle-click a backpack slot with an empty cursor to combine matching stacks and order the whole backpack, including rows outside the current view. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
 
 The creative inventory tab and supported menus with custom player slots show grouped backpack entries.
 

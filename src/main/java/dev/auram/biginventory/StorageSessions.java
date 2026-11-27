@@ -83,6 +83,13 @@ final class StorageSessions {
                         take(player, viewer.menu, selected.icon(), action.gesture());
                     }
                 }
+                case BULK_TAKE -> {
+                    if (carried.isEmpty() && action.entry() >= 0 && action.entry() < viewer.sent
+                            && StorageTransfers.bulkFromEntry(player.getInventory(), viewer.menu, store,
+                            viewer.entries.get(action.entry()).icon())) {
+                        StorageTransfers.playBulkTransferSound(player);
+                    }
+                }
                 case STORE_HOTBAR -> {
                     if (viewer.menu instanceof InventoryMenu && action.entry() >= 0 && action.entry() < viewer.menu.slots.size()) {
                         store.storeHotbarStack(viewer.menu.getSlot(action.entry()));

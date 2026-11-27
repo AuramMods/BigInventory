@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.ViewportNetwork.Access;
+import dev.auram.biginventory.ViewportNetwork.BulkMove;
 import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
@@ -68,6 +69,20 @@ final class ViewportSessions {
         }
         session.menu.broadcastChanges();
         session.sendIndex(player, false);
+    }
+
+    static void bulkMove(ServerPlayer player, BulkMove request) {
+        if (player == null) return;
+        Session session = SESSIONS.get(player);
+        if (session == null || session.token != request.token() || request.sequence() != session.sequence
+                || !valid(player, session.menu) || !session.menu.getCarried().isEmpty()
+                || request.cell() < 0 || request.cell() >= session.mapping.length
+                || session.mapping[request.cell()] == SlotBinding.INACTIVE) return;
+        Slot slot = session.slots.cells().get(request.cell());
+        if (!slot.mayPickup(player) || !StorageTransfers.bulkFromSlot(player.getInventory(), session.menu, slot)) return;
+        session.menu.broadcastChanges();
+        session.sendIndex(player, false);
+        StorageTransfers.playBulkTransferSound(player);
     }
 
     static void page(ServerPlayer player, PageRequest request) {

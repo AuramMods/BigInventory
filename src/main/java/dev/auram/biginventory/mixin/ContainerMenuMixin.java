@@ -28,6 +28,8 @@ import org.spongepowered.asm.mixin.injection.Slice;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.function.IntSupplier;
+
 @Mixin(AbstractContainerMenu.class)
 abstract class ContainerMenuMixin implements MenuStorageAccess {
     @Shadow @Final public NonNullList<Slot> slots;
@@ -113,14 +115,28 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
     }
 
     @Override
-    public void bigInventory$runStorageExport(Inventory inventory, Runnable transfer) {
+    public int bigInventory$runStorageExport(Inventory inventory, IntSupplier transfer) {
         Inventory previous = bigInventory$exportingInventory;
         bigInventory$exportingInventory = inventory;
         try {
-            transfer.run();
+            return transfer.getAsInt();
         } finally {
             bigInventory$exportingInventory = previous;
         }
+    }
+
+    @Override
+    public int bigInventory$moveToHotbar(Slot source, int limit) {
+        ItemStack stack = source.getItem();
+        int offered = Math.min(stack.getCount(), limit);
+        ItemStack portion = stack.copyWithCount(offered);
+        if (!moveItemStackTo(portion, InventoryMenu.USE_ROW_SLOT_START, InventoryMenu.USE_ROW_SLOT_END, false)) return 0;
+        int moved = offered - portion.getCount();
+        stack.shrink(moved);
+        if (stack.isEmpty()) source.setByPlayer(ItemStack.EMPTY);
+        else source.setChanged();
+        source.onTake(((Inventory) source.container).player, stack);
+        return moved;
     }
 
     @Inject(method = {"broadcastChanges", "broadcastFullState", "sendAllDataToRemote"},
@@ -145,15 +161,7 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
             ci.cancel();
         } else if (BackpackViewport.isBound(slot)) {
             if (menu instanceof InventoryMenu) {
-                ItemStack stack = slot.getItem();
-                int offered = Math.min(stack.getCount(), Backpack.stackLimit(stack));
-                ItemStack portion = stack.copyWithCount(offered);
-                if (moveItemStackTo(portion, InventoryMenu.USE_ROW_SLOT_START, InventoryMenu.USE_ROW_SLOT_END, false)) {
-                    stack.shrink(offered - portion.getCount());
-                    if (stack.isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
-                    else slot.setChanged();
-                    slot.onTake(player, stack);
-                }
+                bigInventory$moveToHotbar(slot, Backpack.stackLimit(slot.getItem()));
             } else {
                 StorageTransfers.moveFromSlot(inventory, menu, slot);
             }

@@ -6,6 +6,7 @@ import dev.auram.biginventory.MenuStorageAccess;
 import dev.auram.biginventory.SlotBinding;
 import dev.auram.biginventory.ViewportNetwork;
 import dev.auram.biginventory.ViewportNetwork.Access;
+import dev.auram.biginventory.ViewportNetwork.BulkMove;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
 import dev.auram.biginventory.ViewportNetwork.PageRequest;
@@ -14,6 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
@@ -67,15 +69,21 @@ public final class ClientViewport {
     static boolean sortAt(AbstractContainerScreen<?> screen, double mouseX, double mouseY) {
         View view = active;
         if (view == null || !represents(screen, view) || !view.menu.getCarried().isEmpty()) return false;
-        double x = mouseX - screen.getGuiLeft();
-        double y = mouseY - screen.getGuiTop();
-        for (var slot : view.slots.cells()) {
-            if (slot.isActive() && x >= slot.x - 1 && x < slot.x + 17 && y >= slot.y - 1 && y < slot.y + 17) {
-                view.sort();
-                return true;
-            }
-        }
-        return false;
+        if (view.cellAt(screen, mouseX, mouseY) < 0) return false;
+        view.sort();
+        return true;
+    }
+
+    static boolean bulkMoveAt(AbstractContainerScreen<?> screen, double mouseX, double mouseY) {
+        View view = active;
+        if (view == null || !represents(screen, view) || !view.interactive() || !view.menu.getCarried().isEmpty()) return false;
+        int cell = view.cellAt(screen, mouseX, mouseY);
+        if (cell < 0) return false;
+        ItemStack stack = view.slots.cells().get(cell).getItem();
+        if (stack.getCount() <= Backpack.stackLimit(stack)) return false;
+        view.lastClick = Util.getMillis();
+        new BulkMove(view.token, view.applied, cell).send();
+        return true;
     }
 
     private static boolean represents(AbstractContainerScreen<?> screen, View view) {
@@ -188,11 +196,39 @@ public final class ClientViewport {
             }
         }
 
+        int cellAt(AbstractContainerScreen<?> screen, double mouseX, double mouseY) {
+            double x = mouseX - screen.getGuiLeft();
+            double y = mouseY - screen.getGuiTop();
+            for (int i = 0; i < slots.cells().size(); i++) {
+                Slot slot = slots.cells().get(i);
+                if (screen instanceof BackpackCreativeScreen creative) slot = creative.displayedSlot(slot);
+                if (slot != null && slot.isActive() && slot.x >= 0
+                        && x >= slot.x - 1 && x < slot.x + 17 && y >= slot.y - 1 && y < slot.y + 17) return i;
+            }
+            return -1;
+        }
+
         boolean displays(int slot) {
             for (int bound : mapping) {
                 if (bound == slot && bound != SlotBinding.INACTIVE) return true;
             }
             return false;
+        }
+
+        int occupiedCells() {
+            int lastPosition = -1;
+            // Visible slots already reflect native click prediction. The index can arrive a tick later.
+            for (int i = 0; i < mapping.length; i++) {
+                if (mapping[i] >= 0 && slots.cells().get(i).hasItem()) {
+                    lastPosition = Math.max(lastPosition, Backpack.positionOf(mapping[i]));
+                }
+            }
+            for (int slot : contents.descendingKeySet()) {
+                int position = Backpack.positionOf(slot);
+                if (position <= lastPosition) break;
+                if (!displays(slot)) return position + 1;
+            }
+            return lastPosition + 1;
         }
 
         void write(int slot, ItemStack stack) {

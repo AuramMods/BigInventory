@@ -1,6 +1,7 @@
 package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.Backpack;
+import dev.auram.biginventory.BackpackViewport;
 import dev.auram.biginventory.SlotBinding;
 import dev.auram.biginventory.mixin.SlotPosition;
 import net.minecraft.Util;
@@ -91,7 +92,7 @@ final class RealStorageGrid implements BackpackGrid {
             refresh();
             long now = Util.getMillis();
             updateSlide(now);
-            if (activeSlide == null && !mouseHeld()
+            if (activeSlide == null && view.sequence == view.applied && !mouseHeld()
                     && (explicitChange || now - view.lastClick >= SETTLE_AFTER_CLICK_MS)) {
                 int[] next = mapping();
                 Slide outgoing = scrollChange && !dragging ? departingRow(next) : null;
@@ -141,14 +142,11 @@ final class RealStorageGrid implements BackpackGrid {
                         .map(java.util.Map.Entry::getKey).toList();
             }
         }
-        int count = query.isEmpty() ? unfilteredCells() : matches.size();
-        totalRows = (count + COLUMNS - 1) / COLUMNS;
+        boolean unfiltered = query.isEmpty();
+        int count = unfiltered ? view.occupiedCells() : matches.size();
+        totalRows = BackpackViewport.rowsFor(count, unfiltered);
         target = Mth.clamp(target, 0, maxRow());
         if (maxRow() == 0) dragging = false;
-    }
-
-    private int unfilteredCells() {
-        return view.contents.isEmpty() ? 0 : Backpack.positionOf(view.contents.lastKey()) + 1;
     }
 
     private int[] mapping() {
@@ -226,6 +224,7 @@ final class RealStorageGrid implements BackpackGrid {
 
     @Override
     public boolean scroll(double mouseX, double mouseY, double delta) {
+        refresh();
         if (delta == 0 || maxRow() == 0 || !(inside(mouseX, mouseY) || overRail(mouseX, mouseY))) return false;
         if (!dragging) changeTarget(Mth.clamp(target - delta, 0, maxRow()));
         return true;
@@ -279,7 +278,11 @@ final class RealStorageGrid implements BackpackGrid {
 
     private int railX() { return x + WIDTH + RAIL_GAP; }
     private int gridHeight() { return rows * CELL; }
-    private int maxRow() { return Math.max(0, totalRows - rows); }
-    private int thumbHeight() { return Math.max(7, gridHeight() * rows / totalRows); }
+    private int maxRow() {
+        // Keep the page under the cursor when the last item on that page is picked back up.
+        int anchor = query.isEmpty() ? (int) Math.round(target) : 0;
+        return Math.max(anchor, totalRows - rows);
+    }
+    private int thumbHeight() { return Math.max(7, gridHeight() * rows / (rows + maxRow())); }
     private int thumbTop(int thumb) { return y + (int) Math.round((gridHeight() - thumb) * target / maxRow()); }
 }

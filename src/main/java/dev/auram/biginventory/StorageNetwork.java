@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class StorageNetwork {
-    private static final String VERSION = "6";
+    private static final String VERSION = "7";
     private static final int PAGE_SIZE = 24;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
@@ -108,7 +108,7 @@ public final class StorageNetwork {
         }
     }
 
-    public enum Gesture { DEPOSIT, DEPOSIT_ONE, TAKE, TAKE_HALF, SHIFT_TAKE, STORE_HOTBAR }
+    public enum Gesture { DEPOSIT, DEPOSIT_ONE, TAKE, TAKE_HALF, SHIFT_TAKE, STORE_HOTBAR, BULK_TAKE }
 
     public record Action(int menu, int token, int revision, int entry, Gesture gesture) {
         void encode(FriendlyByteBuf buf) {

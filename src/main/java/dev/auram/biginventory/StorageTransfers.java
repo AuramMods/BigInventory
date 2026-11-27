@@ -1,8 +1,12 @@
 package dev.auram.biginventory;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.SlotItemHandler;
@@ -14,8 +18,8 @@ import java.util.Map;
 public final class StorageTransfers {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    static void moveToContainer(Inventory inventory, AbstractContainerMenu menu, Backpack storage,
-                                ItemStack pattern, int limit) {
+    static int moveToContainer(Inventory inventory, AbstractContainerMenu menu, Backpack storage,
+                               ItemStack pattern, int limit) {
         var player = inventory.player;
         for (int index = 0; index < menu.slots.size(); index++) {
             Slot slot = menu.getSlot(index);
@@ -23,12 +27,14 @@ public final class StorageTransfers {
             if (!Backpack.isStorageSlot(inventorySlot) || !slot.isActive() || !slot.mayPickup(player)) continue;
 
             ItemStack offered = storage.take(pattern, limit);
-            if (offered.isEmpty()) return;
+            if (offered.isEmpty()) return 0;
             int menuIndex = index;
-            ((MenuStorageAccess) menu).bigInventory$runStorageExport(inventory, () -> {
+            int offeredCount = offered.getCount();
+            return ((MenuStorageAccess) menu).bigInventory$runStorageExport(inventory, () -> {
                 // Keep the original Slot object and menu index for menus that classify their own slots.
                 ItemStack original = inventory.getItem(inventorySlot);
                 inventory.setItem(inventorySlot, offered);
+                int unaccepted;
                 try {
                     if (slot.mayPickup(player)) menu.quickMoveStack(player, menuIndex);
                 } catch (RuntimeException failure) {
@@ -37,21 +43,24 @@ public final class StorageTransfers {
                     // Some terminals return EMPTY even on success. The source holds the actual remainder.
                     ItemStack remainder = inventory.getItem(inventorySlot);
                     inventory.setItem(inventorySlot, original);
+                    unaccepted = remainder.getCount();
                     storage.returnTransferRemainder(remainder);
                 }
+                return offeredCount - unaccepted;
             });
-            return;
         }
+        return 0;
     }
 
-    public static void moveFromSlot(Inventory inventory, AbstractContainerMenu menu, Slot slot) {
+    public static int moveFromSlot(Inventory inventory, AbstractContainerMenu menu, Slot slot) {
         ItemStack stored = slot.getItem();
-        if (stored.isEmpty()) return;
-        ((MenuStorageAccess) menu).bigInventory$runStorageExport(inventory, () -> {
+        if (stored.isEmpty()) return 0;
+        int initial = stored.getCount();
+        return ((MenuStorageAccess) menu).bigInventory$runStorageExport(inventory, () -> {
             int limit = Backpack.stackLimit(stored);
             if (stored.getCount() <= limit) {
                 menu.quickMoveStack(inventory.player, slot.index);
-                return;
+                return initial - slot.getItem().getCount();
             }
             // Let the menu handle its own destination, with just one regular stack in the source slot.
             slot.set(stored.split(limit));
@@ -66,7 +75,53 @@ public final class StorageTransfers {
                     Backpack.of(inventory).returnTransferRemainder(stored);
                 }
             }
+            return initial - stored.getCount();
         });
+    }
+
+    static boolean bulkFromSlot(Inventory inventory, AbstractContainerMenu menu, Slot slot) {
+        ItemStack initial = slot.getItem().copy();
+        if (initial.getCount() <= Backpack.stackLimit(initial)) return false;
+        if (menu instanceof InventoryMenu) {
+            return ((MenuStorageAccess) menu).bigInventory$moveToHotbar(slot, initial.getCount()) > 0;
+        }
+
+        while (slot.mayPickup(inventory.player)) {
+            try {
+                if (moveFromSlot(inventory, menu, slot) <= 0 || !Backpack.matches(initial, slot.getItem())) break;
+            } catch (RuntimeException failure) {
+                LOGGER.warn("Bulk storage quick-move failed in {}", menu.getClass().getName(), failure);
+                break;
+            }
+        }
+        ItemStack remainder = slot.getItem();
+        return !Backpack.matches(initial, remainder) || remainder.getCount() < initial.getCount();
+    }
+
+    static boolean bulkFromEntry(Inventory inventory, AbstractContainerMenu menu, Backpack storage, ItemStack pattern) {
+        int limit = Backpack.stackLimit(pattern);
+        if (storage.countStored(pattern) <= limit) return false;
+        if (menu instanceof InventoryMenu) {
+            ItemStack offered = storage.takeMatching(pattern, storage.hotbarRoom(pattern));
+            int count = offered.getCount();
+            storage.putInHotbar(offered);
+            boolean moved = offered.getCount() < count;
+            storage.returnTransferRemainder(offered);
+            return moved;
+        }
+        // A grouped entry can represent many physical stacks. Transfer at most one backpack slot's worth.
+        int remaining = Backpack.MAX_STACK;
+        while (remaining > 0) {
+            int moved = moveToContainer(inventory, menu, storage, pattern, Math.min(remaining, limit));
+            if (moved <= 0) break;
+            remaining -= moved;
+        }
+        return remaining < Backpack.MAX_STACK;
+    }
+
+    static void playBulkTransferSound(ServerPlayer player) {
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.5F, 0.55F);
     }
 
     public static Map<Slot, ItemStack> previewToHotbar(Inventory inventory, AbstractContainerMenu menu, ItemStack proposal) {

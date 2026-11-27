@@ -77,6 +77,14 @@ public final class ClientEvents {
                 && ClientViewport.sortAt(screen, event.getMouseX(), event.getMouseY())) event.setCanceled(true);
     }
 
+    public static boolean bulkMoveAt(Screen screen, double x, double y) {
+        if (!(screen instanceof AbstractContainerScreen<?> container)) return false;
+        StorageGrid grid = ClientStorage.grid(screen);
+        if (!ClientViewport.bulkMoveAt(container, x, y) && (grid == null || !grid.bulkMoveAt(x, y))) return false;
+        ((ViewportScreen) container).bigInventory$resetPageGesture();
+        return true;
+    }
+
     @SubscribeEvent
     public static void fullStackCount(ItemTooltipEvent event) {
         int count = event.getItemStack().getCount();

@@ -35,6 +35,9 @@ public final class ViewportNetwork {
         channel.messageBuilder(CreativeTrash.class, 11, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(CreativeTrash::encode).decoder(CreativeTrash::decode).consumerMainThread((msg, ctx) ->
                         ViewportSessions.trash(ctx.get().getSender(), msg)).add();
+        channel.messageBuilder(BulkMove.class, 12, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(BulkMove::encode).decoder(BulkMove::decode).consumerMainThread((msg, ctx) ->
+                        ViewportSessions.bulkMove(ctx.get().getSender(), msg)).add();
     }
 
     public static void request(Access message) {
@@ -64,6 +67,16 @@ public final class ViewportNetwork {
 
         private static CreativeTrash decode(FriendlyByteBuf buf) {
             return new CreativeTrash(buf.readVarInt(), buf.readBoolean());
+        }
+    }
+
+    public record BulkMove(int token, int sequence, int cell) {
+        public void send() { StorageNetwork.sendToServer(this); }
+
+        private void encode(FriendlyByteBuf buf) { buf.writeVarInt(token).writeVarInt(sequence).writeVarInt(cell); }
+
+        private static BulkMove decode(FriendlyByteBuf buf) {
+            return new BulkMove(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
         }
     }
 

@@ -35,6 +35,7 @@ record StoragePrediction(List<Entry> entries, @Nullable ItemStack cursor, Map<Sl
                 yield deposit(entries, stack, stack.getCount(), rules, hotbar);
             }
             case TAKE, TAKE_HALF, SHIFT_TAKE -> withdraw(entries, gesture, index, menu, inventory);
+            case BULK_TAKE -> new StoragePrediction(entries, null);
         };
     }
 

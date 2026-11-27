@@ -1,5 +1,6 @@
 package dev.auram.biginventory.client;
 
+import dev.auram.biginventory.Backpack;
 import dev.auram.biginventory.StorageNetwork.Entry;
 import dev.auram.biginventory.StorageNetwork.Gesture;
 import dev.auram.biginventory.client.StorageSwapAnimation.Point;
@@ -185,6 +186,15 @@ final class StorageGrid implements BackpackGrid {
         refresh();
         sweep = new StorageSweep(filtered);
         visitSweep(mouseX, mouseY);
+        return true;
+    }
+
+    boolean bulkMoveAt(double x, double y) {
+        if (!search.visible || !view.renderedCarried().isEmpty() || dragging) return false;
+        refresh();
+        Entry entry = entryAt(indexUnderMouse(x, y));
+        if (entry == null || entry.id() < 0 || entry.count() <= Backpack.stackLimit(entry.icon())) return false;
+        view.act(entry.id(), Gesture.BULK_TAKE);
         return true;
     }
 
