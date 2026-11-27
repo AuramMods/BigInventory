@@ -159,15 +159,18 @@ public final class ContainerBackpack {
 
     @SubscribeEvent
     public static void drawSearch(ContainerScreenEvent.Render.Foreground event) {
-        if (active == null || active.screen() != event.getContainerScreen() || !active.visible()) return;
-        var screen = active.screen();
-        var graphics = event.getGuiGraphics();
+        var screen = event.getContainerScreen();
+        if (!(screen instanceof ContainerWindows)) drawSearch(screen, event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
+    }
+
+    public static void drawSearch(AbstractContainerScreen<?> screen, GuiGraphics graphics, int mouseX, int mouseY) {
+        if (active == null || active.screen() != screen || !active.visible()) return;
         graphics.pose().pushPose();
         try {
             // Several container screens draw their own inventory label after the normal widgets.
             graphics.pose().translate(-screen.getGuiLeft(), -screen.getGuiTop(), 0);
             for (var widget : active.grid().widgets()) {
-                widget.render(graphics, event.getMouseX(), event.getMouseY(), Minecraft.getInstance().getFrameTime());
+                widget.render(graphics, mouseX, mouseY, Minecraft.getInstance().getFrameTime());
             }
         } finally {
             graphics.pose().popPose();
@@ -176,7 +179,8 @@ public final class ContainerBackpack {
 
     @SubscribeEvent
     public static void tooltip(ScreenEvent.Render.Post event) {
-        if (active != null && active.screen() == event.getScreen() && active.visible()) {
+        if (active != null && active.screen() == event.getScreen() && active.visible()
+                && ContainerWindows.allowsBackpackInput(event.getScreen(), event.getMouseX(), event.getMouseY())) {
             active.grid().tooltip(event.getGuiGraphics(), event.getMouseX(), event.getMouseY());
         }
     }
@@ -184,6 +188,7 @@ public final class ContainerBackpack {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void click(ScreenEvent.MouseButtonPressed.Pre event) {
         if (active != null && active.screen() == event.getScreen() && active.visible()
+                && ContainerWindows.allowsBackpackInput(event.getScreen(), event.getMouseX(), event.getMouseY())
                 && active.grid().click(event.getMouseX(), event.getMouseY(), event.getButton())) {
             active.screen().setFocused(null);
             event.setCanceled(true);
@@ -193,12 +198,15 @@ public final class ContainerBackpack {
     @SubscribeEvent
     public static void scroll(ScreenEvent.MouseScrolled.Pre event) {
         if (active != null && active.screen() == event.getScreen() && active.visible()
+                && ContainerWindows.allowsBackpackInput(event.getScreen(), event.getMouseX(), event.getMouseY())
                 && active.grid().scroll(event.getMouseX(), event.getMouseY(), event.getScrollDelta())) event.setCanceled(true);
     }
 
     @SubscribeEvent
     public static void drag(ScreenEvent.MouseDragged.Pre event) {
-        if (active != null && active.screen() == event.getScreen() && active.grid().drag(event.getMouseY())) event.setCanceled(true);
+        if (active != null && active.screen() == event.getScreen()
+                && ContainerWindows.allowsBackpackInput(event.getScreen(), event.getMouseX(), event.getMouseY())
+                && active.grid().drag(event.getMouseY())) event.setCanceled(true);
     }
 
     @SubscribeEvent

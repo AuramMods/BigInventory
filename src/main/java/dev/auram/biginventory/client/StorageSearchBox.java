@@ -2,6 +2,7 @@ package dev.auram.biginventory.client;
 
 import dev.auram.biginventory.mixin.FontColor;
 import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -35,6 +36,12 @@ public final class StorageSearchBox extends EditBox {
     @Override
     public int getInnerWidth() {
         return textWidth;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return ContainerWindows.allowsBackpackInput(Minecraft.getInstance().screen, mouseX, mouseY)
+                && super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

@@ -74,11 +74,14 @@ public final class ClientEvents {
     public static void sortBackpack(ScreenEvent.MouseButtonPressed.Pre event) {
         if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
                 && event.getScreen() instanceof AbstractContainerScreen<?> screen
+                && ContainerWindows.allowsBackpackInput(screen, event.getMouseX(), event.getMouseY())
                 && ClientViewport.sortAt(screen, event.getMouseX(), event.getMouseY())) event.setCanceled(true);
     }
 
     public static boolean bulkMoveAt(Screen screen, double x, double y) {
-        if (!(screen instanceof AbstractContainerScreen<?> container)) return false;
+        if (!(screen instanceof AbstractContainerScreen<?> container) || !ContainerWindows.allowsBackpackInput(screen, x, y)) {
+            return false;
+        }
         StorageGrid grid = ClientStorage.grid(screen);
         if (!ClientViewport.bulkMoveAt(container, x, y) && (grid == null || !grid.bulkMoveAt(x, y))) return false;
         ((ViewportScreen) container).bigInventory$resetPageGesture();
@@ -102,7 +105,7 @@ public final class ClientEvents {
             if (previous != null) previous.stopSweep();
             sweepingScreen = null;
         }
-        if (!Screen.hasShiftDown()) return;
+        if (!Screen.hasShiftDown() || !ContainerWindows.allowsBackpackInput(event.getScreen(), event.getMouseX(), event.getMouseY())) return;
         var grid = ClientStorage.grid(event.getScreen());
         if (grid != null && grid.startSweep(event.getMouseX(), event.getMouseY())) {
             sweepingScreen = event.getScreen();
@@ -115,7 +118,9 @@ public final class ClientEvents {
     public static void dragStorageSweep(ScreenEvent.MouseDragged.Pre event) {
         if (event.getMouseButton() != GLFW.GLFW_MOUSE_BUTTON_LEFT || sweepingScreen != event.getScreen()) return;
         var grid = ClientStorage.grid(event.getScreen());
-        if (grid != null) grid.dragSweep(event.getMouseX(), event.getMouseY());
+        if (grid != null && ContainerWindows.allowsBackpackInput(event.getScreen(), event.getMouseX(), event.getMouseY())) {
+            grid.dragSweep(event.getMouseX(), event.getMouseY());
+        }
         event.setCanceled(true);
     }
 
