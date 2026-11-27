@@ -33,6 +33,7 @@ final class RealStorageGrid implements BackpackGrid {
     private final ClientViewport.View view;
     private final Font font;
     private final StorageSearchBox search;
+    private final AutoSortButton autoSort;
     private StorageSearchQuery query;
     private List<Integer> matches = List.of();
     private int contentVersion = -1;
@@ -54,7 +55,7 @@ final class RealStorageGrid implements BackpackGrid {
         this.view = view;
         this.font = font;
         search = new StorageSearchBox(font);
-        search.setWidth(WIDTH);
+        search.setWidth(WIDTH - AutoSortButton.WIDTH - AutoSortButton.GAP);
         search.setMaxLength(96);
         search.setValue(priorSearch);
         query = StorageSearchQuery.parse(priorSearch);
@@ -65,12 +66,24 @@ final class RealStorageGrid implements BackpackGrid {
             explicitChange = true;
             scrollChange = false;
         });
+        autoSort = new AutoSortButton(enabled -> {
+            view.setAutoSort(enabled);
+            if (enabled) {
+                target = 0;
+                dragging = false;
+                explicitChange = true;
+                scrollChange = false;
+            }
+        });
     }
 
     @Override
     public StorageSearchBox search() {
         return search;
     }
+
+    @Override
+    public AutoSortButton autoSort() { return autoSort; }
 
     @Override
     public void close() {
@@ -86,8 +99,7 @@ final class RealStorageGrid implements BackpackGrid {
         this.x = x;
         this.y = y;
         rows = Math.min(limit, view.slots.cells().size() / COLUMNS);
-        search.setPosition(x, y - SEARCH_HEIGHT - gap);
-        search.visible = visible;
+        searchBounds(x, y - SEARCH_HEIGHT - gap, visible);
         if (visible) {
             refresh();
             long now = Util.getMillis();
@@ -96,7 +108,7 @@ final class RealStorageGrid implements BackpackGrid {
                     && (explicitChange || now - view.lastClick >= SETTLE_AFTER_CLICK_MS)) {
                 int[] next = mapping();
                 Slide outgoing = scrollChange && !dragging ? departingRow(next) : null;
-                if (view.request(next)) pendingSlide = outgoing;
+                if (!view.sendPendingSort(next, query.isEmpty()) && view.request(next)) pendingSlide = outgoing;
                 explicitChange = false;
                 scrollChange = false;
             }

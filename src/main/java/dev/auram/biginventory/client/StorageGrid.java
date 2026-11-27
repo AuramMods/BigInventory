@@ -36,6 +36,7 @@ final class StorageGrid implements BackpackGrid {
     private final ClientStorage.View view;
     private final Font font;
     private final StorageSearchBox search;
+    private final AutoSortButton autoSort;
     private List<Entry> filtered = List.of();
     private StorageSearchQuery query;
     private int displayedChange = -1;
@@ -55,7 +56,7 @@ final class StorageGrid implements BackpackGrid {
         this.view = view;
         this.font = font;
         search = new StorageSearchBox(font);
-        search.setWidth(WIDTH);
+        search.setWidth(WIDTH - AutoSortButton.WIDTH - AutoSortButton.GAP);
         search.setMaxLength(96);
         search.setValue(priorSearch);
         search.setResponder(text -> {
@@ -68,6 +69,15 @@ final class StorageGrid implements BackpackGrid {
             scrollPosition = 0;
         });
         query = StorageSearchQuery.parse(priorSearch);
+        autoSort = new AutoSortButton(enabled -> {
+            view.setAutoSort(enabled);
+            if (enabled) {
+                stopSweep();
+                cancelAnimation();
+                targetRow = 0;
+                scrollPosition = 0;
+            }
+        });
         view.grid = this;
     }
 
@@ -75,23 +85,11 @@ final class StorageGrid implements BackpackGrid {
     public StorageSearchBox search() { return search; }
 
     @Override
-    public void bounds(int x, int y, int left, int top, int rows, boolean visible, int searchGap) {
-        bounds(x, y, rows, searchGap);
-        search.visible = visible;
-        if (!visible) cancelAnimation();
-    }
+    public AutoSortButton autoSort() { return autoSort; }
 
     @Override
-    public void close() {
-        ClientStorage.close(view);
-    }
-
-    void bounds(int x, int y, int rows) {
-        bounds(x, y, rows, SEARCH_GAP);
-    }
-
-    void bounds(int x, int y, int rows, int searchGap) {
-        if (this.x != x || this.y != y || this.rows != rows) {
+    public void bounds(int x, int y, int left, int top, int rows, boolean visible, int searchGap) {
+        if (!visible || this.x != x || this.y != y || this.rows != rows) {
             cancelAnimation();
             stopSweep();
             dragging = false;
@@ -99,7 +97,12 @@ final class StorageGrid implements BackpackGrid {
         this.x = x;
         this.y = y;
         this.rows = rows;
-        search.setPosition(x, y - SEARCH_HEIGHT - searchGap);
+        searchBounds(x, y - SEARCH_HEIGHT - searchGap, visible);
+    }
+
+    @Override
+    public void close() {
+        ClientStorage.close(view);
     }
 
     @Override

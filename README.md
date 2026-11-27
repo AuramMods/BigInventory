@@ -10,9 +10,11 @@ Each backpack slot can hold up to 10,000 matching items, subject to the weight l
 
 Shift-click a backpack slot to move up to one regular stack to the hotbar or the open container. Control-click an oversized stack to keep transferring from it until the destination fills or the stack runs out. Incoming chest transfers fill matching stacks first, then use the first empty hotbar slot or the first empty backpack slot.
 
-The backpack exposes another row as soon as the last row holds an item. Scroll down to reach the new row. Opening your player inventory shifts the contents past any leading empty slots and preserves their order. Middle-click a backpack slot with an empty cursor to combine matching stacks and order the whole backpack, including rows outside the current view. The player inventory and vanilla chests can show up to five backpack rows, depending on GUI scale.
+The backpack exposes another row as soon as the last row holds an item. Scroll down to reach it. Middle-click a backpack slot with an empty cursor to combine matching stacks and sort the whole backpack. Use the sort icon beside Search to do this automatically when opening or closing storage. The slashed icon indicates auto-sort is off, which is the default.
 
-The creative inventory tab and supported menus with custom player slots show grouped backpack entries.
+At GUI scales with room, the survival inventory shows up to six backpack rows and vanilla chests show up to five.
+
+The Creative inventory tab also uses real backpack slots. Some modded menus with custom player slots show grouped entries instead.
 
 The white ring beside the hotbar fills as you use storage. Crouch to see the percentage used. The count on the other side follows your selected non-tool item across storage and the hotbar. Using up a stack or breaking a tool can refill its empty hotbar slot from storage.
 

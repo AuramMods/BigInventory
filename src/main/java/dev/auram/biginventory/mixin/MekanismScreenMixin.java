@@ -4,7 +4,6 @@ import dev.auram.biginventory.Backpack;
 import dev.auram.biginventory.client.ContainerBackpack;
 import dev.auram.biginventory.client.ContainerWindows;
 import dev.auram.biginventory.client.PlayerSlotDecoration;
-import dev.auram.biginventory.client.StorageSearchBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -41,8 +40,7 @@ abstract class MekanismScreenMixin implements ContainerWindows {
 
     @Inject(method = "addWindow", at = @At("RETURN"))
     private void bigInventory$unfocusSearch(CallbackInfo ci) {
-        var screen = (AbstractContainerScreen<?>) (Object) this;
-        if (screen.getFocused() instanceof StorageSearchBox) screen.setFocused(null);
+        ContainerBackpack.clearWidgetFocus((AbstractContainerScreen<?>) (Object) this);
     }
 
     // The second addRenderableWidget call creates the plain frame for a menu slot.

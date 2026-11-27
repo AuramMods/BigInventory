@@ -1,5 +1,7 @@
 {
   "biginventory.search": "Search",
+  "biginventory.auto_sort.on": "Auto-sort on",
+  "biginventory.auto_sort.off": "Auto-sort off",
   "biginventory.stack_count": "Stack count: %s",
   "biginventory.stored": "Stored: %s",
   "book.biginventory.big_inventory.name": "Big Inventory Book",

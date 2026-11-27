@@ -231,10 +231,17 @@ public final class ContainerBackpack {
     }
 
     private static void close(boolean restoreSlots) {
+        clearWidgetFocus(active.screen());
         if (restoreSlots) active.slots().restore();
         ((ContainerLayoutAccess) active.screen()).bigInventory$setInventoryTitle(active.label());
         active.grid().close();
         active = null;
+    }
+
+    public static void clearWidgetFocus(AbstractContainerScreen<?> screen) {
+        if (active != null && active.screen() == screen && active.grid().ownsFocus(screen.getFocused())) {
+            screen.setFocused(null);
+        }
     }
 
     public static boolean replacesPlayerInventory(AbstractContainerScreen<?> screen) {
@@ -306,7 +313,7 @@ public final class ContainerBackpack {
             int y = panel.getY() + nativeGridY;
             grid.bounds(x, y + section.gridInset(), screen.getGuiLeft(), screen.getGuiTop(),
                     section.rows(), visible(), section.gap());
-            if (!grid.search().visible && screen.getFocused() == grid.search()) screen.setFocused(null);
+            if (!grid.search().visible && grid.ownsFocus(screen.getFocused())) screen.setFocused(null);
         }
 
         void draw(GuiGraphics graphics, int mouseX, int mouseY) {

@@ -13,7 +13,8 @@ import java.util.Set;
 public final class BackpackViewport {
     public static final int COLUMNS = 9;
     public static final int NATIVE_CELLS = 27;
-    public static final int MAX_CELLS = 45;
+    public static final int CONTAINER_CELLS = 45;
+    public static final int MAX_CELLS = 54;
 
     private final List<Slot> cells;
 

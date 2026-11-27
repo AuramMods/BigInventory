@@ -6,6 +6,7 @@ import dev.auram.biginventory.MenuStorageAccess;
 import dev.auram.biginventory.SlotBinding;
 import dev.auram.biginventory.ViewportNetwork;
 import dev.auram.biginventory.ViewportNetwork.Access;
+import dev.auram.biginventory.ViewportNetwork.AutoSort;
 import dev.auram.biginventory.ViewportNetwork.BulkMove;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
@@ -43,14 +44,14 @@ public final class ClientViewport {
         View view = new View(menu, inventory, viewport, ++tokens);
         active = view;
         VIEWS.put(view.token, view);
-        ViewportNetwork.request(new Access(menu.containerId, view.token, true, creativeCursor));
+        ViewportNetwork.request(new Access(menu.containerId, view.token, true, InventoryPreferences.autoSort(), creativeCursor));
         return view;
     }
 
     static void close(View view) {
         if (view == null || active != view) return;
         active = null;
-        if (!view.closed) ViewportNetwork.request(new Access(view.menu.containerId, view.token, false, null));
+        if (!view.closed) ViewportNetwork.request(new Access(view.menu.containerId, view.token, false, false, null));
     }
 
     static void reset() {
@@ -137,11 +138,21 @@ public final class ClientViewport {
             if (slot >= 0 && !view.displays(slot)) view.write(slot, view.contents.getOrDefault(slot, ItemStack.EMPTY));
         }
         view.received = message.sequence();
+        if (view == active) SmoothSwappingCompat.rebase(view.menu);
     }
 
     public static void ready(ViewportNetwork.Ready message) {
         View view = VIEWS.get(message.token());
-        if (view != null && message.sequence() == view.received) view.applied = message.sequence();
+        if (view != null && message.sequence() == view.received && message.sequence() > view.applied) {
+            view.applied = message.sequence();
+            if (view == active) SmoothSwappingCompat.rebase(view.menu);
+        }
+    }
+
+    static void beforeRender(AbstractContainerScreen<?> screen) {
+        if (active != null && active.received != active.applied && represents(screen, active)) {
+            SmoothSwappingCompat.rebase(active.menu);
+        }
     }
 
     static final class View {
@@ -161,6 +172,7 @@ public final class ClientViewport {
         boolean closed;
         private int[] requested = UNMAPPED;
         private int requestContentVersion;
+        private boolean pendingSort;
 
         View(AbstractContainerMenu menu, Inventory inventory, BackpackViewport slots, int token) {
             this.menu = menu;
@@ -192,8 +204,22 @@ public final class ClientViewport {
 
         void sort() {
             if (interactive() && menu.getCarried().isEmpty()) {
+                pendingSort = false;
                 ViewportNetwork.request(new PageRequest(menu.containerId, token, ++sequence, UNMAPPED, true));
             }
+        }
+
+        void setAutoSort(boolean enabled) {
+            if (active != this || closed) return;
+            new AutoSort(menu.containerId, token, true, enabled).send();
+            pendingSort = enabled;
+        }
+
+        boolean sendPendingSort(int[] next, boolean unfiltered) {
+            if (!pendingSort || !interactive() || !menu.getCarried().isEmpty()) return false;
+            pendingSort = false;
+            ViewportNetwork.request(new PageRequest(menu.containerId, token, ++sequence, unfiltered ? next : UNMAPPED, true));
+            return true;
         }
 
         int cellAt(AbstractContainerScreen<?> screen, double mouseX, double mouseY) {

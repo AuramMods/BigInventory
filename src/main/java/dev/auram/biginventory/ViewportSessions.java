@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.ViewportNetwork.Access;
+import dev.auram.biginventory.ViewportNetwork.AutoSort;
 import dev.auram.biginventory.ViewportNetwork.BulkMove;
 import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.ViewportNetwork.Index;
@@ -45,14 +46,23 @@ final class ViewportSessions {
             return;
         }
         if (previous != null) close(player, previous);
-        if (menu == player.inventoryMenu) Backpack.of(player.getInventory()).removeLeadingVacancies();
+        Backpack storage = Backpack.of(player.getInventory());
+        if (request.autoSort()) storage.sort();
+        else if (menu == player.inventoryMenu) storage.removeLeadingVacancies();
         if (creative && menu.getCarried().isEmpty() && !cursor.isEmpty()
                 && cursor.getCount() <= Backpack.stackLimit(cursor) && cursor.isItemEnabled(player.level().enabledFeatures())) {
             menu.setCarried(cursor);
         }
-        Session session = new Session(menu, slots, request.token(), creative);
+        Session session = new Session(menu, slots, request.token(), creative, request.autoSort());
         SESSIONS.put(player, session);
         session.sendIndex(player, true);
+    }
+
+    static void autoSort(ServerPlayer player, AutoSort request) {
+        if (player == null) return;
+        Session session = SESSIONS.get(player);
+        if (session != null && session.token == request.token() && session.menu.containerId == request.menu()
+                && valid(player, session.menu)) session.autoSort = request.enabled();
     }
 
     static void trash(ServerPlayer player, CreativeTrash request) {
@@ -96,9 +106,8 @@ final class ViewportSessions {
         if (request.sequence() <= session.sequence) return;
         session.sequence = request.sequence();
         Backpack storage = Backpack.of(player.getInventory());
-        if (request.sort()) {
-            if (session.mapping.length != 0 && session.menu.getCarried().isEmpty()) storage.sort();
-        } else if (session.slots.validates(request.slots(), storage)) {
+        if (request.sort() && session.mapping.length != 0 && session.menu.getCarried().isEmpty()) storage.sort();
+        if (session.slots.validates(request.slots(), storage)) {
             ((MenuStorageAccess) session.menu).bigInventory$resetQuickCraft();
             session.slots.bind(request.slots());
             session.mapping = request.slots();
@@ -120,7 +129,10 @@ final class ViewportSessions {
 
     static void remove(ServerPlayer player) {
         Session session = SESSIONS.remove(player);
-        if (session != null) session.slots.reset();
+        if (session != null) {
+            session.slots.reset();
+            if (session.autoSort && player.isAlive()) Backpack.of(player.getInventory()).sort();
+        }
     }
 
     private static boolean valid(ServerPlayer player, AbstractContainerMenu menu) {
@@ -130,6 +142,7 @@ final class ViewportSessions {
     private static void close(ServerPlayer player, Session session) {
         SESSIONS.remove(player);
         if (session.creative && player.containerMenu == session.menu && player.isAlive()) session.menu.removed(player);
+        if (session.autoSort && player.isAlive()) Backpack.of(player.getInventory()).sort();
         session.sendIndex(player, false);
         session.slots.reset();
         ((MenuStorageAccess) session.menu).bigInventory$resetQuickCraft();
@@ -145,16 +158,18 @@ final class ViewportSessions {
         final BackpackViewport slots;
         final int token;
         final boolean creative;
+        boolean autoSort;
         final Map<Integer, ItemStack> sent = new HashMap<>();
         int size;
         int sequence;
         int[] mapping = UNMAPPED;
 
-        Session(AbstractContainerMenu menu, BackpackViewport slots, int token, boolean creative) {
+        Session(AbstractContainerMenu menu, BackpackViewport slots, int token, boolean creative, boolean autoSort) {
             this.menu = menu;
             this.slots = slots;
             this.token = token;
             this.creative = creative;
+            this.autoSort = autoSort;
         }
 
         void sendIndex(ServerPlayer player, boolean initial) {
@@ -166,9 +181,10 @@ final class ViewportSessions {
                 ItemStack stack = inventory.getItem(slot);
                 ItemStack previous = sent.getOrDefault(slot, ItemStack.EMPTY);
                 if (ItemStack.matches(stack, previous)) continue;
-                if (stack.isEmpty()) sent.remove(slot);
-                else sent.put(slot, stack.copy());
-                updates.add(new Update(slot, stack));
+                ItemStack snapshot = stack.copy();
+                if (snapshot.isEmpty()) sent.remove(slot);
+                else sent.put(slot, snapshot);
+                updates.add(new Update(slot, snapshot));
                 if (updates.size() == ViewportNetwork.INDEX_BATCH_SIZE) {
                     StorageNetwork.send(player, new Index(token, false, List.copyOf(updates)));
                     updates.clear();

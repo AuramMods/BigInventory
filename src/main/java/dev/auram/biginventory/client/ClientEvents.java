@@ -70,6 +70,11 @@ public final class ClientEvents {
         ClientStorage.reset();
     }
 
+    @SubscribeEvent
+    public static void rebaseSwapAnimation(ScreenEvent.Render.Pre event) {
+        if (event.getScreen() instanceof AbstractContainerScreen<?> screen) ClientViewport.beforeRender(screen);
+    }
+
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void sortBackpack(ScreenEvent.MouseButtonPressed.Pre event) {
         if (event.getButton() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE

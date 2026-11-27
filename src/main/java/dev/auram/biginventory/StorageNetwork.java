@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class StorageNetwork {
-    private static final String VERSION = "7";
+    private static final String VERSION = "8";
     private static final int PAGE_SIZE = 24;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(BigInventory.MOD_ID, "storage"), () -> VERSION, VERSION::equals, VERSION::equals);
@@ -67,12 +67,12 @@ public final class StorageNetwork {
         }
     }
 
-    public record ViewRequest(int menu, int token, boolean open) {
+    public record ViewRequest(int menu, int token, boolean open, boolean autoSort) {
         void encode(FriendlyByteBuf buf) {
-            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open);
+            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open).writeBoolean(autoSort);
         }
         static ViewRequest decode(FriendlyByteBuf buf) {
-            return new ViewRequest(buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
+            return new ViewRequest(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
         }
     }
 

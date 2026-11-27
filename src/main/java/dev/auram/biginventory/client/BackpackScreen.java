@@ -34,7 +34,7 @@ final class BackpackScreen extends InventoryScreen {
     @Override
     protected void init() {
         imageWidth = PANEL_WIDTH;
-        rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS);
+        rows = Mth.clamp((height - 12 - STORAGE_TOP - FOOTER) / StorageGrid.CELL, 1, StorageGrid.MAX_ROWS + 1);
         imageHeight = STORAGE_TOP + rows * StorageGrid.CELL + FOOTER;
         recipeButton = null;
         super.init();
@@ -71,9 +71,7 @@ final class BackpackScreen extends InventoryScreen {
             Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
             recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);
         }
-        if (!search.visible) {
-            if (getFocused() == search) setFocused(null);
-        }
+        if (!search.visible && grid.ownsFocus(getFocused())) setFocused(null);
     }
 
     @Override

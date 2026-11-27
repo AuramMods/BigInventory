@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.StorageNetwork.*;
+import dev.auram.biginventory.ViewportNetwork.AutoSort;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -25,21 +26,47 @@ final class StorageSessions {
         Viewer old = VIEWERS.get(player.getUUID());
         if (!request.open()) {
             if (old != null && old.token == request.token()) {
-                VIEWERS.remove(player.getUUID());
+                close(player, old);
             }
             return;
         }
         AbstractContainerMenu menu = player.containerMenu;
         if (menu.containerId != request.menu() || !validMenu(player, menu)) return;
-        Viewer viewer = new Viewer(menu, request.token());
+        if (old != null) close(player, old);
+        Viewer viewer = new Viewer(menu, request.token(), request.autoSort());
         VIEWERS.put(player.getUUID(), viewer);
+        if (viewer.autoSort) Backpack.of(player.getInventory()).sort();
         viewer.refresh(player, true);
         viewer.sendPage(player);
     }
 
     static void remove(ServerPlayer player) {
-        VIEWERS.remove(player.getUUID());
+        Viewer viewer = VIEWERS.remove(player.getUUID());
+        if (viewer != null && viewer.autoSort && player.isAlive()) Backpack.of(player.getInventory()).sort();
         STATUS.remove(player.getUUID());
+    }
+
+    private static void close(ServerPlayer player, Viewer viewer) {
+        VIEWERS.remove(player.getUUID());
+        if (viewer.autoSort && player.isAlive()) {
+            Backpack.of(player.getInventory()).sort();
+            player.containerMenu.broadcastChanges();
+        }
+    }
+
+    static void autoSort(ServerPlayer player, AutoSort request) {
+        if (player == null) return;
+        Viewer viewer = VIEWERS.get(player.getUUID());
+        if (viewer == null || viewer.token != request.token() || viewer.menu.containerId != request.menu()
+                || viewer.menu != player.containerMenu || !validMenu(player, viewer.menu)) return;
+        if (viewer.autoSort == request.enabled()) return;
+        viewer.autoSort = request.enabled();
+        if (viewer.autoSort) {
+            Backpack.of(player.getInventory()).sort();
+            viewer.menu.broadcastChanges();
+            viewer.refresh(player, false);
+            viewer.sendPage(player);
+        }
     }
 
     static void tick(ServerPlayer player, StorageWeight weight) {
@@ -51,7 +78,7 @@ final class StorageSessions {
         Viewer viewer = VIEWERS.get(player.getUUID());
         if (viewer == null) return;
         if (viewer.menu != player.containerMenu || !validMenu(player, viewer.menu)) {
-            VIEWERS.remove(player.getUUID());
+            close(player, viewer);
             return;
         }
         if (player.tickCount % 5 == 0 && viewer.sent == viewer.entries.size()) viewer.refresh(player, false);
@@ -143,14 +170,16 @@ final class StorageSessions {
     private static final class Viewer {
         final AbstractContainerMenu menu;
         final int token;
+        boolean autoSort;
         int revision;
         int sent;
         List<Entry> entries = List.of();
         List<CompoundTag> keys = List.of();
 
-        Viewer(AbstractContainerMenu menu, int token) {
+        Viewer(AbstractContainerMenu menu, int token, boolean autoSort) {
             this.menu = menu;
             this.token = token;
+            this.autoSort = autoSort;
         }
 
         void refresh(ServerPlayer player, boolean force) {

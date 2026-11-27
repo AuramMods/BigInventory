@@ -1,6 +1,7 @@
 package dev.auram.biginventory.mixin;
 
 import dev.auram.biginventory.MenuStorageAccess;
+import dev.auram.biginventory.BackpackViewport;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ChestMenu;
@@ -17,7 +18,7 @@ abstract class ChestViewportMixin {
     private void bigInventory$reserveStorageRows(MenuType<?> type, int menuId, Inventory inventory,
                                                  Container container, int rows, CallbackInfo ci) {
         if (getClass() == (Class<?>) ChestMenu.class) {
-            ((MenuStorageAccess) this).bigInventory$reserveViewportSlots(inventory);
+            ((MenuStorageAccess) this).bigInventory$reserveViewportSlots(inventory, BackpackViewport.CONTAINER_CELLS);
         }
     }
 }

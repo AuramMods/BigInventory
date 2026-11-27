@@ -11,7 +11,12 @@
     {
       "type": "patchouli:text",
       "title": "Find Items",
-      "text": "Click $(thing)Search$() to filter by item name or registry ID. Use $(thing)@ModName$() to filter by mod, for example $(thing)@Biomes Black$(). Middle-click a backpack slot with an empty cursor to combine matching stacks across the whole backpack."
+      "text": "Click $(thing)Search$() to filter by item name or registry ID. Use $(thing)@ModName$() to filter by mod, for example $(thing)@Biomes Black$()."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Sort the Backpack",
+      "text": "Middle-click a backpack slot with an empty cursor to combine matching stacks across the whole backpack. Use the sort icon at the end of the search box to do this automatically when opening or closing storage. The slash shows that auto-sort is off."
     },
     {
       "type": "patchouli:text",

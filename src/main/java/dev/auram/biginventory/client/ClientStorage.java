@@ -11,6 +11,7 @@ import dev.auram.biginventory.StorageNetwork.ViewAck;
 import dev.auram.biginventory.StorageNetwork.ViewPage;
 import dev.auram.biginventory.StorageNetwork.ViewRequest;
 import dev.auram.biginventory.StorageNetwork.ViewStart;
+import dev.auram.biginventory.ViewportNetwork.AutoSort;
 import dev.auram.biginventory.mixin.CreativeSlotAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -50,13 +51,13 @@ public final class ClientStorage {
     static View open(AbstractContainerMenu menu) {
         if (view != null) close(view);
         view = new View(menu, ++tokens);
-        StorageNetwork.request(new ViewRequest(menu.containerId, view.token, true));
+        StorageNetwork.request(new ViewRequest(menu.containerId, view.token, true, InventoryPreferences.autoSort()));
         return view;
     }
 
     static void close(View closing) {
         if (closing != null && view == closing) {
-            StorageNetwork.request(new ViewRequest(view.menu.containerId, view.token, false));
+            StorageNetwork.request(new ViewRequest(view.menu.containerId, view.token, false, false));
             view = null;
         }
     }
@@ -191,6 +192,10 @@ public final class ClientStorage {
         View(AbstractContainerMenu menu, int token) {
             this.menu = menu;
             this.token = token;
+        }
+
+        void setAutoSort(boolean enabled) {
+            if (view == this) new AutoSort(menu.containerId, token, false, enabled).send();
         }
 
         boolean act(int id, Gesture gesture) {

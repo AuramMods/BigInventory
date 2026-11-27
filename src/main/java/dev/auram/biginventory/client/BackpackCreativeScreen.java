@@ -112,7 +112,7 @@ public final class BackpackCreativeScreen extends CreativeModeInventoryScreen {
         ClientViewport.close(view);
         if (view != null) player.inventoryMenu.setCarried(ItemStack.EMPTY);
         if (search != null) {
-            if (getFocused() == search) setFocused(null);
+            if (grid.ownsFocus(getFocused())) setFocused(null);
             for (var widget : grid.widgets()) removeWidget(widget);
         }
         view = null;

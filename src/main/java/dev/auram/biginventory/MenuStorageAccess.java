@@ -12,7 +12,7 @@ public interface MenuStorageAccess {
 
     int bigInventory$moveToHotbar(Slot source, int limit);
 
-    void bigInventory$reserveViewportSlots(Inventory inventory);
+    void bigInventory$reserveViewportSlots(Inventory inventory, int cellCount);
 
     void bigInventory$resetQuickCraft();
 

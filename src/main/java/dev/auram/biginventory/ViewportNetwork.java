@@ -38,6 +38,11 @@ public final class ViewportNetwork {
         channel.messageBuilder(BulkMove.class, 12, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(BulkMove::encode).decoder(BulkMove::decode).consumerMainThread((msg, ctx) ->
                         ViewportSessions.bulkMove(ctx.get().getSender(), msg)).add();
+        channel.messageBuilder(AutoSort.class, 13, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(AutoSort::encode).decoder(AutoSort::decode).consumerMainThread((msg, ctx) -> {
+                    if (msg.viewport()) ViewportSessions.autoSort(ctx.get().getSender(), msg);
+                    else StorageSessions.autoSort(ctx.get().getSender(), msg);
+                }).add();
     }
 
     public static void request(Access message) {
@@ -48,15 +53,27 @@ public final class ViewportNetwork {
         StorageNetwork.sendToServer(message);
     }
 
-    public record Access(int menu, int token, boolean open, @Nullable ItemStack creativeCursor) {
+    public record Access(int menu, int token, boolean open, boolean autoSort, @Nullable ItemStack creativeCursor) {
         private void encode(FriendlyByteBuf buf) {
-            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open).writeBoolean(creativeCursor != null);
+            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(open).writeBoolean(autoSort).writeBoolean(creativeCursor != null);
             if (creativeCursor != null) buf.writeNbt(creativeCursor.save(new CompoundTag()));
         }
 
         private static Access decode(FriendlyByteBuf buf) {
-            return new Access(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
+            return new Access(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(),
                     buf.readBoolean() ? ItemStack.of(buf.readNbt()) : null);
+        }
+    }
+
+    public record AutoSort(int menu, int token, boolean viewport, boolean enabled) {
+        public void send() { StorageNetwork.sendToServer(this); }
+
+        private void encode(FriendlyByteBuf buf) {
+            buf.writeVarInt(menu).writeVarInt(token).writeBoolean(viewport).writeBoolean(enabled);
+        }
+
+        private static AutoSort decode(FriendlyByteBuf buf) {
+            return new AutoSort(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
         }
     }
 

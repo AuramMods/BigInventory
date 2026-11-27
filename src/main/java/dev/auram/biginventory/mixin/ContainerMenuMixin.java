@@ -46,8 +46,8 @@ abstract class ContainerMenuMixin implements MenuStorageAccess {
     @Unique private long bigInventory$beforeCollect = -1;
 
     @Override
-    public void bigInventory$reserveViewportSlots(Inventory inventory) {
-        for (int i = BackpackViewport.NATIVE_CELLS; i < BackpackViewport.MAX_CELLS; i++) {
+    public void bigInventory$reserveViewportSlots(Inventory inventory, int cellCount) {
+        for (int i = BackpackViewport.NATIVE_CELLS; i < cellCount; i++) {
             Slot cell = new Slot(inventory, Backpack.slotAt(i), -30000, -30000);
             ((SlotBinding) cell).bigInventory$reserve();
             addSlot(cell);

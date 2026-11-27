@@ -1,16 +1,52 @@
 package dev.auram.biginventory.client;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.core.NonNullList;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 
 final class SmoothSwappingCompat {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    static void rebase(AbstractContainerMenu menu) {
+        if (!ModList.get().isLoaded("smoothswapping") || SnapshotApi.INSTANCE == null) return;
+        try {
+            SnapshotApi api = SnapshotApi.INSTANCE;
+            // A page change reuses menu indices for different storage addresses. Drop flights tied to the old addresses.
+            api.reset().invoke(null);
+            var slots = menu.getItems();
+            api.current().set(null, slots);
+            api.copy().invoke(null, slots, api.previous().get(null));
+            api.previousCursor().set(null, menu.getCarried().copy());
+        } catch (ReflectiveOperationException | LinkageError failure) {
+            LOGGER.debug("Could not synchronize Smooth Swapping with the new backpack page", failure);
+        }
+    }
+
+    private record SnapshotApi(Method reset, Method copy, Field current, Field previous, Field previousCursor) {
+        @Nullable private static final SnapshotApi INSTANCE = load();
+
+        @Nullable
+        private static SnapshotApi load() {
+            try {
+                Class<?> state = Class.forName("dev.shwg.smoothswapping.SmoothSwapping");
+                Class<?> util = Class.forName("dev.shwg.smoothswapping.SwapUtil");
+                return new SnapshotApi(util.getMethod("reset"),
+                        util.getMethod("copyStacks", NonNullList.class, NonNullList.class),
+                        state.getField("currentStacks"), state.getField("oldStacks"), state.getField("oldCursorStack"));
+            } catch (ReflectiveOperationException | LinkageError failure) {
+                LOGGER.debug("This version of Smooth Swapping does not expose its slot snapshots", failure);
+                return null;
+            }
+        }
+    }
 
     @Nullable
     static Timing timing() {
