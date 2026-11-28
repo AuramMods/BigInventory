@@ -1,6 +1,7 @@
 package dev.auram.biginventory;
 
 import dev.auram.biginventory.client.ClientViewport;
+import dev.auram.biginventory.client.ClientStorage;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
@@ -43,6 +44,12 @@ public final class ViewportNetwork {
                     if (msg.viewport()) ViewportSessions.autoSort(ctx.get().getSender(), msg);
                     else StorageSessions.autoSort(ctx.get().getSender(), msg);
                 }).add();
+        channel.messageBuilder(Rewind.class, 14, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(Rewind::encode).decoder(Rewind::decode).consumerMainThread((msg, ctx) ->
+                        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                            if (msg.viewport()) ClientViewport.rewind(msg.token());
+                            else ClientStorage.rewind(msg.token());
+                        })).add();
     }
 
     public static void request(Access message) {
@@ -149,6 +156,12 @@ public final class ViewportNetwork {
         private static Ready decode(FriendlyByteBuf buf) {
             return new Ready(buf.readVarInt(), buf.readVarInt());
         }
+    }
+
+    public record Rewind(int token, boolean viewport) {
+        private void encode(FriendlyByteBuf buf) { buf.writeVarInt(token).writeBoolean(viewport); }
+
+        private static Rewind decode(FriendlyByteBuf buf) { return new Rewind(buf.readVarInt(), buf.readBoolean()); }
     }
 
     private ViewportNetwork() {}

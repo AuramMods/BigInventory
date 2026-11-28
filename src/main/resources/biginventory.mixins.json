@@ -4,7 +4,7 @@
   "package": "dev.auram.biginventory.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "biginventory.refmap.json",
-  "mixins": ["InventoryMixin", "PlayerSaveMixin", "SlotMixin", "InventoryHandlerMixin", "ContainerMenuMixin", "InventoryViewportMixin", "ChestViewportMixin", "RecipePlacementMixin", "PlayerExhaustionMixin", "StackCountNetworkMixin", "StackCountSaveMixin"],
-  "client": ["SlotPosition", "RecipeBookClientMixin", "CreativeCursorMixin", "CreativeInventoryAccess", "CreativeSlotAccess", "EditBoxTextMixin", "FontColor", "StorageScreenPredictionMixin", "StorageClickPredictionMixin", "StorageMouseMixin", "ItemCountDecorationMixin", "ContainerLayoutAccess", "ContainerLayoutMixin", "ScreenWidgets", "MantleContainerScreenMixin", "MekanismScreenMixin", "MekanismSlotDecorationMixin", "ExtraUtilitiesGeneratorScreenMixin", "PatchouliWordMixin"],
+  "mixins": ["InventoryMixin", "PlayerSaveMixin", "SlotMixin", "InventoryHandlerMixin", "ContainerMenuMixin", "InventoryViewportMixin", "ChestViewportMixin", "RecipePlacementMixin", "PlayerExhaustionMixin", "StackCountNetworkMixin", "StackCountSaveMixin", "QuarkTransferMixin", "QuarkRestockMixin", "QuarkSortMixin"],
+  "client": ["SlotPosition", "RecipeBookClientMixin", "CreativeCursorMixin", "CreativeInventoryAccess", "CreativeSlotAccess", "EditBoxTextMixin", "FontColor", "StorageScreenPredictionMixin", "StorageClickPredictionMixin", "StorageMouseMixin", "ItemCountDecorationMixin", "ContainerLayoutAccess", "ContainerLayoutMixin", "ScreenWidgets", "MantleContainerScreenMixin", "MekanismScreenMixin", "MekanismSlotDecorationMixin", "ExtraUtilitiesGeneratorScreenMixin", "PatchouliWordMixin", "QuarkChestButtonMixin", "QuarkInventoryButtonsMixin"],
   "injectors": { "defaultRequire": 1 }
 }

@@ -7,6 +7,7 @@ import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
 import dev.auram.biginventory.ViewportNetwork.PageRequest;
+import dev.auram.biginventory.ViewportNetwork.Rewind;
 import dev.auram.biginventory.ViewportNetwork.Update;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -15,6 +16,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +127,32 @@ final class ViewportSessions {
         if (session == null) return;
         if (valid(player, session.menu)) session.sendIndex(player, false);
         else close(player, session);
+    }
+
+    static boolean hasView(ServerPlayer player) {
+        Session session = SESSIONS.get(player);
+        return session != null && valid(player, session.menu);
+    }
+
+    static int[] visibleSlots(ServerPlayer player) {
+        Session session = SESSIONS.get(player);
+        if (session == null || !valid(player, session.menu)) return null;
+        int[] visible = new int[session.mapping.length];
+        int count = 0;
+        for (int i = 0; i < session.mapping.length; i++) {
+            Slot slot = session.slots.cells().get(i);
+            if (session.mapping[i] != SlotBinding.INACTIVE && slot.isActive() && slot.mayPickup(player)) {
+                visible[count++] = session.mapping[i];
+            }
+        }
+        return Arrays.copyOf(visible, count);
+    }
+
+    static void afterChestSort(ServerPlayer player) {
+        Session session = SESSIONS.get(player);
+        if (session == null || !valid(player, session.menu)) return;
+        session.sendIndex(player, false);
+        StorageNetwork.send(player, new Rewind(session.token, true));
     }
 
     static void remove(ServerPlayer player) {

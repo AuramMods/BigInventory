@@ -2,6 +2,7 @@ package dev.auram.biginventory;
 
 import dev.auram.biginventory.StorageNetwork.*;
 import dev.auram.biginventory.ViewportNetwork.AutoSort;
+import dev.auram.biginventory.ViewportNetwork.Rewind;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
@@ -83,6 +84,19 @@ final class StorageSessions {
         }
         if (player.tickCount % 5 == 0 && viewer.sent == viewer.entries.size()) viewer.refresh(player, false);
         viewer.sendPage(player);
+    }
+
+    static boolean hasView(ServerPlayer player) {
+        Viewer viewer = VIEWERS.get(player.getUUID());
+        return viewer != null && viewer.menu == player.containerMenu && validMenu(player, viewer.menu);
+    }
+
+    static void afterChestSort(ServerPlayer player) {
+        Viewer viewer = VIEWERS.get(player.getUUID());
+        if (viewer == null || viewer.menu != player.containerMenu || !validMenu(player, viewer.menu)) return;
+        viewer.refresh(player, false);
+        viewer.sendPage(player);
+        StorageNetwork.send(player, new Rewind(viewer.token, false));
     }
 
     static void action(ServerPlayer player, Action action) {

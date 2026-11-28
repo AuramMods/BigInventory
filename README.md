@@ -10,6 +10,8 @@ Each backpack slot can hold up to 10,000 matching items, subject to the weight l
 
 Shift-click a backpack slot to move up to one regular stack to the hotbar or the open container. Control-click an oversized stack to keep transferring from it until the destination fills or the stack runs out. Incoming chest transfers fill matching stacks first, then use the first empty hotbar slot or the first empty backpack slot.
 
+With Quark's chest controls enabled, the backpack buttons sit beside the player grid. Insert compacts and sorts the remaining backpack items so the next pass starts at the top. Extract can fill rows beyond the visible grid within your weight limit.
+
 The backpack exposes another row as soon as the last row holds an item. Scroll down to reach it. Middle-click a backpack slot with an empty cursor to combine matching stacks and sort the whole backpack. Use the sort icon beside Search to do this automatically when opening or closing storage. The slashed icon indicates auto-sort is off, which is the default.
 
 At GUI scales with room, the survival inventory shows up to six backpack rows and vanilla chests show up to five.

@@ -88,6 +88,10 @@ public final class ClientStorage {
         if (view != null && view.token == ack.token()) view.acknowledge(ack.revision());
     }
 
+    public static void rewind(int token) {
+        if (view != null && view.token == token && view.grid != null) view.grid.rewind();
+    }
+
     public static ItemStack renderedCarried(AbstractContainerMenu menu, boolean animate) {
         View visible = visibleView(menu);
         if (visible == null) return menu.getCarried();

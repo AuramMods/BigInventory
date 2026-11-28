@@ -87,6 +87,14 @@ final class StorageGrid implements BackpackGrid {
     @Override
     public AutoSortButton autoSort() { return autoSort; }
 
+    void rewind() {
+        stopSweep();
+        cancelAnimation();
+        dragging = false;
+        targetRow = 0;
+        scrollPosition = 0;
+    }
+
     @Override
     public void bounds(int x, int y, int left, int top, int rows, boolean visible, int searchGap) {
         if (!visible || this.x != x || this.y != y || this.rows != rows) {

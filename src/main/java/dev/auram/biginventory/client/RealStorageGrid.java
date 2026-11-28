@@ -37,6 +37,7 @@ final class RealStorageGrid implements BackpackGrid {
     private StorageSearchQuery query;
     private List<Integer> matches = List.of();
     private int contentVersion = -1;
+    private int rewind;
     private int x;
     private int y;
     private int rows = 1;
@@ -101,6 +102,15 @@ final class RealStorageGrid implements BackpackGrid {
         rows = Math.min(limit, view.slots.cells().size() / COLUMNS);
         searchBounds(x, y - SEARCH_HEIGHT - gap, visible);
         if (visible) {
+            if (rewind != view.rewind) {
+                rewind = view.rewind;
+                target = 0;
+                dragging = false;
+                explicitChange = true;
+                scrollChange = false;
+                pendingSlide = null;
+                activeSlide = null;
+            }
             refresh();
             long now = Util.getMillis();
             updateSlide(now);

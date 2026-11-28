@@ -149,6 +149,12 @@ public final class ClientViewport {
         }
     }
 
+    public static void rewind(int token) {
+        if (active == null || active.token != token || active.closed) return;
+        active.rewind++;
+        SmoothSwappingCompat.rebase(active.menu);
+    }
+
     static void beforeRender(AbstractContainerScreen<?> screen) {
         if (active != null && active.received != active.applied && represents(screen, active)) {
             SmoothSwappingCompat.rebase(active.menu);
@@ -168,6 +174,7 @@ public final class ClientViewport {
         int received;
         int applied;
         int presented;
+        int rewind;
         boolean receivedIndex;
         boolean closed;
         private int[] requested = UNMAPPED;
