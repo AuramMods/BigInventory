@@ -11,6 +11,7 @@ import dev.auram.biginventory.ViewportNetwork.BulkMove;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
 import dev.auram.biginventory.ViewportNetwork.PageRequest;
+import dev.auram.biginventory.ViewportNetwork.PageSeen;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -97,6 +98,7 @@ public final class ClientViewport {
         if (view == null) return;
         for (var change : message.updates()) {
             int slot = change.slot();
+            if (!Backpack.isStorageSlot(slot)) continue;
             ItemStack stack = change.item();
             if (stack.isEmpty()) view.contents.remove(slot);
             else view.contents.put(slot, stack);
@@ -117,48 +119,27 @@ public final class ClientViewport {
 
     public static void page(Page message) {
         View view = VIEWS.get(message.token());
-        if (view == null || message.sequence() < view.applied) return;
+        if (view == null) return;
         if (message.closed()) {
             VIEWS.remove(message.token());
             view.closed = true;
-            view.slots.reset();
-        } else if (message.slots().length == view.slots.cells().size()) {
-            view.slots.bind(message.slots());
+            if (active != null && active != view && active.menu == view.menu && active.mapping.length != 0) return;
+            view.restoreDeparted(UNMAPPED);
         } else {
-            view.slots.reset();
+            if (view != active || !view.acceptPage(message)) return;
         }
         ((MenuStorageAccess) view.menu).bigInventory$resetQuickCraft();
         if (Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen && represents(screen, view)) {
             ((ViewportScreen) screen).bigInventory$resetPageGesture();
             if (screen instanceof BackpackCreativeScreen creative) creative.cancelQuickMoveAnimation();
         }
-        int[] previous = view.mapping;
-        view.mapping = message.slots();
-        for (int slot : previous) {
-            if (slot >= 0 && !view.displays(slot)) view.write(slot, view.contents.getOrDefault(slot, ItemStack.EMPTY));
-        }
-        view.received = message.sequence();
         if (view == active) SmoothSwappingCompat.rebase(view.menu);
-    }
-
-    public static void ready(ViewportNetwork.Ready message) {
-        View view = VIEWS.get(message.token());
-        if (view != null && message.sequence() == view.received && message.sequence() > view.applied) {
-            view.applied = message.sequence();
-            if (view == active) SmoothSwappingCompat.rebase(view.menu);
-        }
     }
 
     public static void rewind(int token) {
         if (active == null || active.token != token || active.closed) return;
         active.rewind++;
         SmoothSwappingCompat.rebase(active.menu);
-    }
-
-    static void beforeRender(AbstractContainerScreen<?> screen) {
-        if (active != null && active.received != active.applied && represents(screen, active)) {
-            SmoothSwappingCompat.rebase(active.menu);
-        }
     }
 
     static final class View {
@@ -171,7 +152,6 @@ public final class ClientViewport {
         int contentVersion;
         long lastClick;
         int sequence;
-        int received;
         int applied;
         int presented;
         int rewind;
@@ -197,7 +177,48 @@ public final class ClientViewport {
         }
 
         void present() {
-            if (ready()) presented = applied;
+            if (ready() && presented != applied) {
+                presented = applied;
+                new PageSeen(token, presented).send();
+            }
+        }
+
+        boolean acceptPage(Page page) {
+            if (page.sequence() != sequence || page.sequence() <= applied) return false;
+            int[] addresses = page.slots();
+            if (addresses.length == 0 && mapping.length == 0) {
+                applied = page.sequence();
+                return true;
+            }
+            if (!slots.hasValidAddresses(addresses) || addresses.length != page.stacks().size()) return false;
+
+            restoreDeparted(addresses);
+            for (int i = 0; i < addresses.length; i++) {
+                int address = addresses[i];
+                if (address == SlotBinding.INACTIVE) continue;
+                ItemStack stack = page.stacks().get(i);
+                if (!ItemStack.matches(stack, contents.getOrDefault(address, ItemStack.EMPTY))) {
+                    if (stack.isEmpty()) contents.remove(address);
+                    else contents.put(address, stack);
+                    contentVersion++;
+                }
+                write(address, stack);
+            }
+            menu.setCarried(page.carried());
+            applied = page.sequence();
+            return true;
+        }
+
+        void restoreDeparted(int[] addresses) {
+            int[] previous = mapping;
+            mapping = addresses;
+            for (int address : previous) {
+                if (Backpack.isStorageSlot(address) && !displays(address)) {
+                    write(address, contents.getOrDefault(address, ItemStack.EMPTY));
+                }
+            }
+            if (addresses.length == 0) slots.reset();
+            else slots.bind(addresses);
         }
 
         boolean request(int[] next) {

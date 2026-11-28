@@ -7,11 +7,13 @@ import dev.auram.biginventory.ViewportNetwork.CreativeTrash;
 import dev.auram.biginventory.ViewportNetwork.Index;
 import dev.auram.biginventory.ViewportNetwork.Page;
 import dev.auram.biginventory.ViewportNetwork.PageRequest;
+import dev.auram.biginventory.ViewportNetwork.PageSeen;
 import dev.auram.biginventory.ViewportNetwork.Rewind;
 import dev.auram.biginventory.ViewportNetwork.Update;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -22,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /** Each connection can bind one active menu to its own backpack. */
-final class ViewportSessions {
+public final class ViewportSessions {
     private static final Map<ServerPlayer, Session> SESSIONS = new HashMap<>();
     private static final int[] UNMAPPED = {};
 
@@ -39,12 +41,12 @@ final class ViewportSessions {
         boolean creative = cursor != null;
         if (menu.containerId != request.menu() || !valid(player, menu)
                 || (creative && (!player.isCreative() || menu != player.inventoryMenu))) {
-            StorageNetwork.send(player, new Page(request.token(), 0, true, UNMAPPED));
+            StorageNetwork.send(player, Page.closed(request.token(), 0));
             return;
         }
         BackpackViewport slots = BackpackViewport.find(menu, player.getInventory());
         if (slots == null) {
-            StorageNetwork.send(player, new Page(request.token(), 0, true, UNMAPPED));
+            StorageNetwork.send(player, Page.closed(request.token(), 0));
             return;
         }
         if (previous != null) close(player, previous);
@@ -87,6 +89,7 @@ final class ViewportSessions {
         if (player == null) return;
         Session session = SESSIONS.get(player);
         if (session == null || session.token != request.token() || request.sequence() != session.sequence
+                || request.sequence() != session.presented
                 || !valid(player, session.menu) || !session.menu.getCarried().isEmpty()
                 || request.cell() < 0 || request.cell() >= session.mapping.length
                 || session.mapping[request.cell()] == SlotBinding.INACTIVE) return;
@@ -102,7 +105,7 @@ final class ViewportSessions {
         Session session = SESSIONS.get(player);
         if (session == null || session.token != request.token() || request.menu() != session.menu.containerId
                 || !valid(player, session.menu)) {
-            StorageNetwork.send(player, new Page(request.token(), request.sequence(), true, UNMAPPED));
+            StorageNetwork.send(player, Page.closed(request.token(), request.sequence()));
             return;
         }
         if (request.sequence() <= session.sequence) return;
@@ -115,11 +118,7 @@ final class ViewportSessions {
             session.mapping = request.slots();
         }
         session.sendIndex(player, false);
-        // Both connections process these messages in order. No native click can be sent
-        // from the new page until the client has received this mapping.
-        StorageNetwork.send(player, new Page(session.token, session.sequence, false, session.mapping));
-        session.menu.broadcastFullState();
-        StorageNetwork.send(player, new ViewportNetwork.Ready(session.token, session.sequence));
+        session.sendPage(player);
     }
 
     static void tick(ServerPlayer player) {
@@ -127,6 +126,20 @@ final class ViewportSessions {
         if (session == null) return;
         if (valid(player, session.menu)) session.sendIndex(player, false);
         else close(player, session);
+    }
+
+    static void pageSeen(ServerPlayer player, PageSeen message) {
+        Session session = SESSIONS.get(player);
+        if (session != null && session.token == message.token() && session.sequence == message.sequence()
+                && valid(player, session.menu)) session.presented = message.sequence();
+    }
+
+    public static boolean blocksClick(ServerPlayer player, int menuId, int slot, ClickType type) {
+        Session session = SESSIONS.get(player);
+        if (session == null || session.sequence == session.presented || player.containerMenu != session.menu
+                || session.menu.containerId != menuId) return false;
+        return type == ClickType.QUICK_CRAFT || type == ClickType.PICKUP_ALL
+                || slot >= 0 && slot < session.menu.slots.size() && BackpackViewport.isBound(session.menu.getSlot(slot));
     }
 
     static boolean hasView(ServerPlayer player) {
@@ -174,11 +187,8 @@ final class ViewportSessions {
         session.sendIndex(player, false);
         session.slots.reset();
         ((MenuStorageAccess) session.menu).bigInventory$resetQuickCraft();
-        StorageNetwork.send(player, new Page(session.token, session.sequence, true, UNMAPPED));
-        if (player.containerMenu == session.menu) {
-            if (session.creative) session.menu.broadcastChanges();
-            else session.menu.broadcastFullState();
-        }
+        StorageNetwork.send(player, Page.closed(session.token, session.sequence));
+        if (player.containerMenu == session.menu) session.menu.broadcastChanges();
     }
 
     private static final class Session {
@@ -190,6 +200,7 @@ final class ViewportSessions {
         final Map<Integer, ItemStack> sent = new HashMap<>();
         int size;
         int sequence;
+        int presented;
         int[] mapping = UNMAPPED;
 
         Session(AbstractContainerMenu menu, BackpackViewport slots, int token, boolean creative, boolean autoSort) {
@@ -198,6 +209,22 @@ final class ViewportSessions {
             this.token = token;
             this.creative = creative;
             this.autoSort = autoSort;
+        }
+
+        void sendPage(ServerPlayer player) {
+            Inventory inventory = player.getInventory();
+            List<ItemStack> stacks = new ArrayList<>(mapping.length);
+            for (int i = 0; i < mapping.length; i++) {
+                int address = mapping[i];
+                ItemStack stack = address == SlotBinding.INACTIVE ? ItemStack.EMPTY : inventory.getItem(address).copy();
+                stacks.add(stack);
+                // The dedicated snapshot establishes the new baseline for normal vanilla click reconciliation.
+                menu.setRemoteSlot(slots.cells().get(i).index, stack);
+            }
+            ItemStack carried = menu.getCarried().copy();
+            menu.setRemoteCarried(carried);
+            StorageNetwork.send(player, new Page(token, sequence, false, mapping, stacks, carried));
+            menu.broadcastChanges();
         }
 
         void sendIndex(ServerPlayer player, boolean initial) {

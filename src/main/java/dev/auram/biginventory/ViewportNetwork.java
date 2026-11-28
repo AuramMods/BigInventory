@@ -30,9 +30,9 @@ public final class ViewportNetwork {
         channel.messageBuilder(Page.class, 9, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(Page::encode).decoder(Page::decode).consumerMainThread((msg, ctx) ->
                         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientViewport.page(msg))).add();
-        channel.messageBuilder(Ready.class, 10, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(Ready::encode).decoder(Ready::decode).consumerMainThread((msg, ctx) ->
-                        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientViewport.ready(msg))).add();
+        channel.messageBuilder(PageSeen.class, 10, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(PageSeen::encode).decoder(PageSeen::decode).consumerMainThread((msg, ctx) ->
+                        ViewportSessions.pageSeen(ctx.get().getSender(), msg)).add();
         channel.messageBuilder(CreativeTrash.class, 11, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(CreativeTrash::encode).decoder(CreativeTrash::decode).consumerMainThread((msg, ctx) ->
                         ViewportSessions.trash(ctx.get().getSender(), msg)).add();
@@ -136,25 +136,27 @@ public final class ViewportNetwork {
         }
     }
 
-    public record Page(int token, int sequence, boolean closed, int[] slots) {
+    /** The cells and their contents must arrive together, keyed by backpack address. */
+    public record Page(int token, int sequence, boolean closed, int[] slots, List<ItemStack> stacks, ItemStack carried) {
+        static Page closed(int token, int sequence) {
+            return new Page(token, sequence, true, new int[0], List.of(), ItemStack.EMPTY);
+        }
+
         private void encode(FriendlyByteBuf buf) {
             buf.writeVarInt(token).writeVarInt(sequence).writeBoolean(closed);
             buf.writeVarIntArray(slots);
+            for (ItemStack stack : stacks) buf.writeItem(stack);
+            buf.writeItem(carried);
         }
 
         private static Page decode(FriendlyByteBuf buf) {
-            return new Page(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
-                    buf.readVarIntArray(BackpackViewport.MAX_CELLS));
-        }
-    }
-
-    public record Ready(int token, int sequence) {
-        private void encode(FriendlyByteBuf buf) {
-            buf.writeVarInt(token).writeVarInt(sequence);
-        }
-
-        private static Ready decode(FriendlyByteBuf buf) {
-            return new Ready(buf.readVarInt(), buf.readVarInt());
+            int token = buf.readVarInt();
+            int sequence = buf.readVarInt();
+            boolean closed = buf.readBoolean();
+            int[] slots = buf.readVarIntArray(BackpackViewport.MAX_CELLS);
+            List<ItemStack> stacks = new ArrayList<>(slots.length);
+            for (int i = 0; i < slots.length; i++) stacks.add(buf.readItem());
+            return new Page(token, sequence, closed, slots, stacks, buf.readItem());
         }
     }
 
@@ -162,6 +164,14 @@ public final class ViewportNetwork {
         private void encode(FriendlyByteBuf buf) { buf.writeVarInt(token).writeBoolean(viewport); }
 
         private static Rewind decode(FriendlyByteBuf buf) { return new Rewind(buf.readVarInt(), buf.readBoolean()); }
+    }
+
+    public record PageSeen(int token, int sequence) {
+        public void send() { StorageNetwork.sendToServer(this); }
+
+        private void encode(FriendlyByteBuf buf) { buf.writeVarInt(token).writeVarInt(sequence); }
+
+        private static PageSeen decode(FriendlyByteBuf buf) { return new PageSeen(buf.readVarInt(), buf.readVarInt()); }
     }
 
     private ViewportNetwork() {}

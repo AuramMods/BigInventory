@@ -24,6 +24,9 @@ abstract class StorageScreenPredictionMixin implements ViewportScreen {
     @Shadow private long lastClickTime;
     @Shadow private boolean doubleclick;
     @Shadow private boolean skipNextRelease;
+    @Shadow private Slot clickedSlot;
+    @Shadow private ItemStack draggingItem;
+    @Shadow private ItemStack snapbackItem;
 
     @Override
     public void bigInventory$resetPageGesture() {
@@ -33,6 +36,9 @@ abstract class StorageScreenPredictionMixin implements ViewportScreen {
         doubleclick = false;
         quickCraftSlots.clear();
         isQuickCrafting = false;
+        clickedSlot = null;
+        draggingItem = ItemStack.EMPTY;
+        snapbackItem = ItemStack.EMPTY;
         skipNextRelease = true;
     }
 

@@ -51,14 +51,23 @@ public final class BackpackViewport {
     }
 
     public boolean validates(int[] indices, Backpack backpack) {
-        if (indices.length != cells.size()) return false;
         long lastRow = ((long) backpack.size() + COLUMNS - 1) / COLUMNS;
         // A filtered page may need up to one viewport of empty drop targets after the last row.
         long limit = lastRow * COLUMNS + cells.size();
         // The current page can stay open when removing the last occupied row shrinks the backing inventory.
         for (Slot cell : cells) {
-            if (isBound(cell)) limit = Math.max(limit, (long) Backpack.positionOf(cell.getSlotIndex()) + 1);
+            int address = ((SlotBinding) cell).bigInventory$binding();
+            if (address >= 0) limit = Math.max(limit, (long) Backpack.positionOf(address) + 1);
         }
+        return validAddresses(indices, limit);
+    }
+
+    public boolean hasValidAddresses(int[] indices) {
+        return validAddresses(indices, Long.MAX_VALUE);
+    }
+
+    private boolean validAddresses(int[] indices, long limit) {
+        if (indices.length != cells.size()) return false;
         Set<Integer> used = new HashSet<>();
         for (int index : indices) {
             if (index == SlotBinding.INACTIVE) continue;
