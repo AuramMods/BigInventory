@@ -35,6 +35,16 @@ final class PlayerSlots {
         }
     }
 
+    void alignHotbar(int firstSlotX, int y) {
+        for (Position pos : slots) {
+            if (Inventory.isHotbarSlot(pos.index())) {
+                SlotPosition access = (SlotPosition) pos.slot();
+                access.bigInventory$setX(firstSlotX + pos.index() * StorageGrid.CELL);
+                access.bigInventory$setY(y);
+            }
+        }
+    }
+
     void hideBackpack() {
         for (Position pos : slots) {
             if (Backpack.isStorageSlot(pos.index())) {

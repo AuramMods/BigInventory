@@ -50,8 +50,7 @@ final class BackpackScreen extends InventoryScreen {
         if (view == null) return;
         if (playerSlots == null) playerSlots = new PlayerSlots(menu, player.getInventory());
         titleLabelX = menu.getSlot(InventoryMenu.CRAFT_SLOT_START).x - 1;
-        int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
-        playerSlots.arrange(gridLeft - 7, imageHeight - 22);
+        playerSlots.hideBackpack();
         String query = search == null ? "" : search.getValue();
         grid = new RealStorageGrid(view, font, query);
         search = grid.search();
@@ -63,10 +62,18 @@ final class BackpackScreen extends InventoryScreen {
         return grid != null && !(getRecipeBookComponent().isVisible() && width < 379);
     }
 
+    private int gridLeft() {
+        return (imageWidth - StorageGrid.WIDTH) / 2;
+    }
+
+    private void layoutHotbar() {
+        if (playerSlots != null) playerSlots.alignHotbar(gridLeft() + 1, imageHeight - 22);
+    }
+
     private void layoutControls() {
         if (grid == null) return;
-        int gridLeft = (imageWidth - StorageGrid.WIDTH) / 2;
-        grid.bounds(leftPos + gridLeft, topPos + STORAGE_TOP, leftPos, topPos, rows, showGrid());
+        layoutHotbar();
+        grid.bounds(leftPos + gridLeft(), topPos + STORAGE_TOP, leftPos, topPos, rows, showGrid());
         if (recipeButton != null) {
             Slot offhand = menu.getSlot(InventoryMenu.SHIELD_SLOT);
             recipeButton.setPosition(leftPos + offhand.x + 19, topPos + offhand.y - 1);
@@ -110,6 +117,7 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        layoutHotbar();
         if (showGrid() && grid.click(x, y, button)) {
             setFocused(null);
             return true;
@@ -126,11 +134,13 @@ final class BackpackScreen extends InventoryScreen {
 
     @Override
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        layoutHotbar();
         return showGrid() && grid.drag(y) || super.mouseDragged(x, y, button, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
+        layoutHotbar();
         return showGrid() && grid.release() || super.mouseReleased(x, y, button);
     }
 
